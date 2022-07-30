@@ -1,3 +1,4 @@
 {
-    "name": "njsPC-HA"
+    "name": "njsPC-HA",
+    "render_readme": true
 }
