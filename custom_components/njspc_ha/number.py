@@ -1,4 +1,4 @@
-from .const import API_CHLORINATOR_POOL_SETPOINT, API_CHLORINATOR_SPA_SETPOINT, API_SWG_POOL_SETPOINT, DOMAIN, EVENT_CHLORINATOR, POOL_SETPOINT, SPA_SETPOINT
+from .const import API_CHLORINATOR_POOL_SETPOINT, API_CHLORINATOR_SPA_SETPOINT, DOMAIN, EVENT_CHLORINATOR, POOL_SETPOINT, SPA_SETPOINT
 from homeassistant.const import PERCENTAGE
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.number import NumberEntity
