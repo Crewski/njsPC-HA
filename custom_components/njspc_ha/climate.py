@@ -10,7 +10,7 @@ from homeassistant.components.climate.const import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, TEMP_FAHRENHEIT, TEMP_CELCIUS
+from homeassistant.const import ATTR_TEMPERATURE, TEMP_FAHRENHEIT, TEMP_CELSIUS
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -83,7 +83,7 @@ class Climate(CoordinatorEntity, ClimateEntity):
 
     @property
     def temperature_unit(self) -> str:
-        return TEMP_FAHRENHEIT if self._units == 0 else TEMP_CELCIUS
+        return TEMP_FAHRENHEIT if self._units == 0 else TEMP_CELSIUS
 
     @property
     def target_temperature(self) -> float:
