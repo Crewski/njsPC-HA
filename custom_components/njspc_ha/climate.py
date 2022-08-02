@@ -1,10 +1,4 @@
-"""Platform for switch integration."""
-# This file shows the setup for the sensors associated with the cover.
-# They are setup in the same way with the call to the async_setup_entry function
-# via HA from the module __init__. Each sensor has a device_class, this tells HA how
-# to display it in the UI (for know types). The unit_of_measurement property tells HA
-# what the unit is, so it can display the correct range. For predefined types (such as
-# battery), the unit_of_measurement should match what's expected.
+"""Platform for climate integration."""
 
 
 from homeassistant.components.climate.const import (
@@ -16,7 +10,7 @@ from homeassistant.components.climate.const import (
     HVACAction,
     HVACMode,
 )
-from homeassistant.const import ATTR_TEMPERATURE, TEMP_FAHRENHEIT
+from homeassistant.const import ATTR_TEMPERATURE, TEMP_FAHRENHEIT, TEMP_CELCIUS
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -45,28 +39,30 @@ NJSPC_HVAC_MODE_TO_HASS = {
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Add sensors for passed config_entry in HA."""
+    """Add climates for passed config_entry in HA."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
 
     new_devices = []
+    _units = coordinator.api._config["temps"]["units"]["val"]
     for body in coordinator.api._config["temps"]["bodies"]:
         _heatmodes = {}
         for mode in await coordinator.api.get_heatmodes(body["id"]):
             _heatmodes[mode["val"]] = mode["desc"]
-        new_devices.append(Climate(coordinator, body, _heatmodes))
+        new_devices.append(Climate(coordinator, body, _heatmodes, _units))
 
     if new_devices:
         async_add_entities(new_devices)
 
 
 class Climate(CoordinatorEntity, ClimateEntity):
-    """Base representation of a Hello World Sensor."""
+    """Climate entity for njsPC-HA"""
 
-    def __init__(self, coordinator, body, heatmodes):
+    def __init__(self, coordinator, body, heatmodes, units):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._body = body
         self._heatmodes = heatmodes
+        self._units = units
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -87,7 +83,7 @@ class Climate(CoordinatorEntity, ClimateEntity):
 
     @property
     def temperature_unit(self) -> str:
-        return TEMP_FAHRENHEIT
+        return TEMP_FAHRENHEIT if self._units == 0 else TEMP_CELCIUS
 
     @property
     def target_temperature(self) -> float:
@@ -99,11 +95,31 @@ class Climate(CoordinatorEntity, ClimateEntity):
 
     @property
     def min_temp(self) -> float:
-        return 70
+        try:
+            if self._body["type"]["val"] == 0:
+                # pool setpoint
+                return 70 if self._units == 0 else 21
+            else:
+                # spa setpoint
+                return 90 if self._units == 0 else 32
+        except:
+            # default to pool
+            return 70 if self._units == 0 else 21
+        
 
     @property
     def max_temp(self) -> float:
-        return 95
+        try:
+            if self._body["type"]["val"] == 0:
+                # pool setpoint
+                return 95 if self._units == 0 else 35
+            else:
+                # spa setpoint
+                return 104 if self._units == 0 else 40
+        except:
+            # default to pool
+            return 95 if self._units == 0 else 35
+        
 
     @property
     def hvac_modes(self) -> list[HVAC_MODES]:
@@ -116,7 +132,10 @@ class Climate(CoordinatorEntity, ClimateEntity):
 
     @property
     def preset_mode(self) -> str:
-        return self._heatmodes[self._body["heatMode"]["val"]]
+        try:
+            return self._heatmodes[self._body["heatMode"]["val"]]
+        except:
+            return "Off"
 
     @property
     def preset_modes(self) -> list[str]:
@@ -127,7 +146,10 @@ class Climate(CoordinatorEntity, ClimateEntity):
 
     @property
     def hvac_action(self) -> HVACAction:
-        return NJSPC_HVAC_ACTION_TO_HASS[self._body["heatStatus"]["val"]]
+        try:
+            return NJSPC_HVAC_ACTION_TO_HASS[self._body["heatStatus"]["val"]]
+        except:
+            return HVACAction.OFF
 
     @property
     def supported_features(self) -> int:
