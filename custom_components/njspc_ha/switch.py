@@ -45,7 +45,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 class CircuitSwitch(CoordinatorEntity, SwitchEntity):
-    """Base representation of a Hello World Sensor."""
+    """Circuit switch for njsPC-HA"""
 
     def __init__(self, coordinator, circuit, event, command):
         """Initialize the sensor."""
@@ -100,7 +100,7 @@ class CircuitSwitch(CoordinatorEntity, SwitchEntity):
 
 
 class SuperChlorSwitch(CoordinatorEntity, SwitchEntity):
-    """Base representation of a Hello World Sensor."""
+    """Super Chlorinate switch for njsPC-HA"""
 
     def __init__(self, coordinator, chlorinator):
         """Initialize the sensor."""

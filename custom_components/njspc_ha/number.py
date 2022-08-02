@@ -29,10 +29,8 @@ class SWGNumber(CoordinatorEntity, NumberEntity):
         super().__init__(coordinator)
         self._chlorinator = chlorinator
         self._type = type
-        self._attr_value = chlorinator[type]
-        self._attr_unit_of_measurement = PERCENTAGE
-        self._attr_step = 1
         self._command = command
+        self._value = chlorinator[type]
         
 
     def _handle_coordinator_update(self) -> None:
@@ -41,10 +39,10 @@ class SWGNumber(CoordinatorEntity, NumberEntity):
             self.coordinator.data["event"] == EVENT_CHLORINATOR
             and self.coordinator.data["id"] == self._chlorinator["id"]
         ):
-            self._attr_value = self.coordinator.data[self._type]
+            self._value = self.coordinator.data[self._type]
             self.async_write_ha_state()
 
-    async def async_set_value(self, value: float) -> None:
+    async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
         new_value = int(value)
         data = {"id": self._chlorinator["id"], "setPoint": new_value}
@@ -53,7 +51,8 @@ class SWGNumber(CoordinatorEntity, NumberEntity):
     @property
     def name(self):
         """Name of the sensor"""
-        return self._chlorinator["name"] + " Setpoint"
+        name = "Pool" if self._type == POOL_SETPOINT else "Spa"
+        return f'{self._chlorinator["name"]} {name} Setpoint'
 
     @property
     def unique_id(self):
@@ -65,3 +64,15 @@ class SWGNumber(CoordinatorEntity, NumberEntity):
     @property
     def icon(self):
         return "mdi:creation"
+
+    @property
+    def native_value(self):
+        return self._value
+
+    @property
+    def native_step(self):
+        return 1
+
+    @property
+    def native_unit_of_measurement(self):
+        return PERCENTAGE

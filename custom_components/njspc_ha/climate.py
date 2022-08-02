@@ -1,10 +1,7 @@
 """Platform for climate integration."""
 
-
 from homeassistant.components.climate.const import (
     HVAC_MODE_AUTO,
-    HVAC_MODE_HEAT,
-    HVAC_MODE_OFF,
     HVAC_MODES,
     ClimateEntityFeature,
     HVACAction,
@@ -27,16 +24,6 @@ NJSPC_HVAC_ACTION_TO_HASS = {
     8: HVACAction.COOLING,
     128: HVACAction.OFF,
 }
-
-NJSPC_HVAC_MODE_TO_HASS = {
-    # Map to None if we do not know how to represent.
-    1: HVAC_MODE_OFF,
-    3: HVAC_MODE_HEAT,
-    4: HVAC_MODE_HEAT,
-    9: HVAC_MODE_HEAT,
-    25: HVAC_MODE_HEAT,
-}
-
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Add climates for passed config_entry in HA."""
@@ -128,7 +115,6 @@ class Climate(CoordinatorEntity, ClimateEntity):
     @property
     def hvac_mode(self) -> HVACMode:
         return HVAC_MODE_AUTO
-        # return NJSPC_HVAC_MODE_TO_HASS[self._body["heatMode"]["val"]]
 
     @property
     def preset_mode(self) -> str:
@@ -162,21 +148,7 @@ class Climate(CoordinatorEntity, ClimateEntity):
         await self.coordinator.api.command("state/body/setPoint", data)
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
-
         return
-        # njspc_value = next(
-        #     (k for k, v in NJSPC_HVAC_MODE_TO_HASS.items() if v == hvac_mode), None
-        # )
-
-        # if njspc_value is None:
-        #     self.coordinator.logger.error(
-        #         "Invalid mode for set_hvac_mode: %s", hvac_mode
-        #     )
-        #     return
-        # elif njspc_value == 0:
-        #     njspc_value = 1
-        # data = {"id": self._body["id"], "mode": njspc_value}
-        # await self.coordinator.api.command("state/body/heatMode", data)
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         njspc_value = next(

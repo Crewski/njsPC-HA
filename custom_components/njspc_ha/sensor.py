@@ -1,16 +1,8 @@
 """Platform for sensor integration."""
-# This file shows the setup for the sensors associated with the cover.
-# They are setup in the same way with the call to the async_setup_entry function
-# via HA from the module __init__. Each sensor has a device_class, this tells HA how
-# to display it in the UI (for know types). The unit_of_measurement property tells HA
-# what the unit is, so it can display the correct range. For predefined types (such as
-# battery), the unit_of_measurement should match what's expected.
-
 
 from homeassistant.const import (
     DEVICE_CLASS_POWER,
     DEVICE_CLASS_TEMPERATURE,
-    PERCENTAGE,
     POWER_WATT,
     TEMP_CELSIUS,
     TEMP_FAHRENHEIT,
@@ -21,10 +13,6 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN, EVENT_CHLORINATOR, EVENT_PUMP, EVENT_TEMPS
 
 
-# See cover.py for more details.
-# Note how both entities for each roller sensor (battry and illuminance) are added at
-# the same time to the same list. This way only a single async_add_devices call is
-# required.
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Add sensors for passed config_entry in HA."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
@@ -50,13 +38,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         async_add_entities(new_devices)
 
 
-# This base class shows the common properties and methods for a sensor as used in this
-# example. See each sensor for further details about properties and methods that
-# have been overridden.
-
-
 class TempSensor(CoordinatorEntity, SensorEntity):
-    """Base representation of a Hello World Sensor."""
+    """Temp Sensor for njsPC-HA"""
 
     should_poll = False
 
@@ -101,7 +84,7 @@ class TempSensor(CoordinatorEntity, SensorEntity):
 
 
 class RPMSensor(CoordinatorEntity, SensorEntity):
-    """Base representation of a Hello World Sensor."""
+    """RPM Pump Sensor for njsPC-HA"""
 
     should_poll = False
 
@@ -159,7 +142,7 @@ class RPMSensor(CoordinatorEntity, SensorEntity):
 
 
 class PowerSensor(CoordinatorEntity, SensorEntity):
-    """Base representation of a Hello World Sensor."""
+    """Watts Pump Sensor for njsPC-HA"""
 
     should_poll = False
 
@@ -209,7 +192,7 @@ class PowerSensor(CoordinatorEntity, SensorEntity):
 
 
 class SaltSensor(CoordinatorEntity, SensorEntity):
-    """Base representation of a Hello World Sensor."""
+    """SWG Salt Sensor for njsPC-HA"""
 
     should_poll = False
 
@@ -268,7 +251,7 @@ class SaltSensor(CoordinatorEntity, SensorEntity):
 
 
 class StatusSensor(CoordinatorEntity, SensorEntity):
-    """Base representation of a Hello World Sensor."""
+    """Equipment Status Sensor for njsPC-HA"""
 
     should_poll = False
 

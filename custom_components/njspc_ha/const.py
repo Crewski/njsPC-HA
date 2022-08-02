@@ -1,8 +1,5 @@
 """Constants for the njsPC-HA integration."""
 
-# from homeassistant.components.radarr.sensor import ENDPOINTS
-
-
 DOMAIN = "njspc_ha"
 
 # API ENDPOINTS
@@ -14,13 +11,11 @@ API_FEATURE_SETSTATE = "state/feature/setState"
 API_CHLORINATOR_POOL_SETPOINT = "state/chlorinator/poolSetpoint"
 API_CHLORINATOR_SPA_SETPOINT = "state/chlorinator/spaSetpoint"
 API_SUPERCHLOR = "state/chlorinator/superChlorinate"
-# API_SWG_POOL_SETPOINT = "config/chlorinator"
 API_CIRCUIT_SETTHEME = "state/circuit/setTheme"
 API_CONFIG_BODY = "config/body"
 API_HEATMODES = "heatModes"
 API_CONFIG_CIRCUIT = "config/circuit"
 API_LIGHTTHEMES = "lightThemes"
-
 
 # SOCKETIO EVENTS
 EVENT_CIRCUIT = "circuit"

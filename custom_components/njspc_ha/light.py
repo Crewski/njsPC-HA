@@ -42,7 +42,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 class CircuitLight(CoordinatorEntity, LightEntity):
-    """Base representation of a Hello World Sensor."""
+    """Light entity for njsPC-HA."""
 
     def __init__(self, coordinator, circuit, lightthemes, event, command):
         """Initialize the sensor."""
@@ -132,5 +132,4 @@ class CircuitLight(CoordinatorEntity, LightEntity):
         """See if light has effects"""
         if len(self._lightthemes) > 0:
             return LightEntityFeature.EFFECT
-
         return 0
