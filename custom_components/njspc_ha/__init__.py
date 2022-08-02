@@ -22,6 +22,7 @@ from .const import (
     EVENT_CHLORINATOR,
     EVENT_CIRCUIT,
     EVENT_CIRCUITGROUP,
+    EVENT_FEATURE,
     EVENT_LIGHTGROUP,
     EVENT_PUMP,
 )
@@ -124,6 +125,11 @@ class NjsPCHAdata(DataUpdateCoordinator):
         @self.sio.on("circuitGroup")
         async def handle_circuitgroup(data):
             data["event"] = EVENT_CIRCUITGROUP
+            self.async_set_updated_data(data)
+
+        @self.sio.on("feature")
+        async def handle_feature(data):
+            data["event"] = EVENT_FEATURE
             self.async_set_updated_data(data)
 
         @self.sio.event
