@@ -1,7 +1,9 @@
 """Platform for climate integration."""
 
 from homeassistant.components.climate.const import (
-    HVAC_MODE_AUTO,
+    # HVAC_MODE_AUTO,
+    # HVAC_MODE_OFF,
+    # HVAC_MODE_HEAT,
     HVAC_MODES,
     ClimateEntityFeature,
     HVACAction,
@@ -110,21 +112,30 @@ class Climate(CoordinatorEntity, ClimateEntity):
 
     @property
     def hvac_modes(self) -> list[HVAC_MODES]:
-        return [HVAC_MODE_AUTO]
+        # if only off and heat are options, add them as modes, else use presets
+        return [HVACMode.OFF, HVACMode.HEAT] if len(self._heatmodes) <= 2 else [HVACMode.AUTO]
+        # return [HVAC_MODE_AUTO]
 
     @property
     def hvac_mode(self) -> HVACMode:
-        return HVAC_MODE_AUTO
+        if len(self._heatmodes) <= 2:
+            # if heatMode is 0/1 it is off, anything else is heat
+            return HVACMode.OFF if self._body["heatMode"]["val"] <= 1 else HVACMode.HEAT
+        return HVACMode.AUTO
 
     @property
     def preset_mode(self) -> str:
+        if len(self._heatmodes) <= 2:
+            return None
         try:
             return self._heatmodes[self._body["heatMode"]["val"]]
         except:
             return "Off"
 
     @property
-    def preset_modes(self) -> list[str]:
+    def preset_modes(self) -> list[str]:        
+        if len(self._heatmodes) <= 2:
+            return None
         _modes = []
         for mode in self._heatmodes.values():
             _modes.append(mode)
@@ -139,6 +150,9 @@ class Climate(CoordinatorEntity, ClimateEntity):
 
     @property
     def supported_features(self) -> int:
+        
+        if len(self._heatmodes) <= 2:
+            return (ClimateEntityFeature.TARGET_TEMPERATURE)
         return (
             ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
         )
@@ -148,9 +162,27 @@ class Climate(CoordinatorEntity, ClimateEntity):
         await self.coordinator.api.command("state/body/setPoint", data)
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
+        if len(self._heatmodes) <= 2:
+            njspc_value = None
+            if hvac_mode == HVACMode.OFF:
+                njspc_value = 1
+            else:
+                njspc_value = next(
+                    (k for k, v in self._heatmodes.items() if k > 1), None
+                )
+            if njspc_value is None:
+                self.coordinator.logger.error(
+                    "Invalid mode for set_hvac_mode: %s", hvac_mode
+                )
+                return            
+            data = {"id": self._body["id"], "mode": njspc_value}
+            await self.coordinator.api.command("state/body/heatMode", data)
         return
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
+        if len(self._heatmodes) <= 2:
+            return None
+
         njspc_value = next(
             (k for k, v in self._heatmodes.items() if v == preset_mode), None
         )
