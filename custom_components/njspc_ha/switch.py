@@ -11,6 +11,7 @@ from .const import (
     API_FEATURE_SETSTATE,
     API_SUPERCHLOR,
     DOMAIN,
+    EVENT_AVAILABILITY,
     EVENT_CHLORINATOR,
     EVENT_CIRCUIT,
     EVENT_CIRCUITGROUP,
@@ -53,6 +54,7 @@ class CircuitSwitch(CoordinatorEntity, SwitchEntity):
         self._circuit = circuit
         self._event = event
         self._command = command
+        self._available = True
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -61,6 +63,9 @@ class CircuitSwitch(CoordinatorEntity, SwitchEntity):
             and self.coordinator.data["id"] == self._circuit["id"]
         ):
             self._circuit = self.coordinator.data
+            self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
             self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs):
@@ -72,6 +77,14 @@ class CircuitSwitch(CoordinatorEntity, SwitchEntity):
         """Turn the entity on."""
         data = {"id": self._circuit["id"], "state": False}
         await self.coordinator.api.command(self._command, data)
+
+    @property
+    def should_poll(self):
+        return False
+
+    @property
+    def available(self):
+        return self._available
 
     @property
     def name(self):
@@ -106,6 +119,7 @@ class SuperChlorSwitch(CoordinatorEntity, SwitchEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._chlorinator = chlorinator
+        self._available = True
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -114,6 +128,9 @@ class SuperChlorSwitch(CoordinatorEntity, SwitchEntity):
             and self.coordinator.data["id"] == self._chlorinator["id"]
         ):
             self._chlorinator = self.coordinator.data
+            self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
             self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs):
@@ -125,6 +142,14 @@ class SuperChlorSwitch(CoordinatorEntity, SwitchEntity):
         """Turn the entity on."""
         data = {"id": self._chlorinator["id"], "superChlorinate": False}
         await self.coordinator.api.command(API_SUPERCHLOR, data)
+
+    @property
+    def should_poll(self):
+        return False
+
+    @property
+    def available(self):
+        return self._available
 
     @property
     def name(self):

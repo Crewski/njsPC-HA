@@ -18,6 +18,7 @@ from .const import (
     API_LIGHTTHEMES,
     API_STATE_ALL,
     DOMAIN,
+    EVENT_AVAILABILITY,
     EVENT_BODY,
     EVENT_CHLORINATOR,
     EVENT_CIRCUIT,
@@ -88,7 +89,7 @@ class NjsPCHAdata(DataUpdateCoordinator):
 
     async def sio_connect(self):
         """Method to connect to njs-PoolController"""
-        self.sio = socketio.AsyncClient(logger=False, engineio_logger=False)
+        self.sio = socketio.AsyncClient(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=10, logger=False, engineio_logger=False)
 
         @self.sio.on("temps")
         async def handle_temps(data):
@@ -133,15 +134,21 @@ class NjsPCHAdata(DataUpdateCoordinator):
         @self.sio.event
         async def connect():
             print("I'm connected!")
+            avail = {"event": EVENT_AVAILABILITY, "available": True}
+            self.async_set_updated_data(avail)
             self.logger.debug(f"SocketIO connect to {self.api._base_url}")
 
         @self.sio.event
         async def connect_error(data):
+            avail = {"event": EVENT_AVAILABILITY, "available": False}
+            self.async_set_updated_data(avail)
             self.logger.error(f"SocketIO connection error: {data}")
             print("The connection failed!")
 
         @self.sio.event
         async def disconnect():
+            avail = {"event": EVENT_AVAILABILITY, "available": False}
+            self.async_set_updated_data(avail)
             self.logger.debug(f"SocketIO disconnect to {self.api._base_url}")
             print("I'm disconnected!")
 

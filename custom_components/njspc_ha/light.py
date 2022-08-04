@@ -8,6 +8,7 @@ from .const import (
     API_CIRCUIT_SETTHEME,
     API_LIGHTGROUP_SETSTATE,
     DOMAIN,
+    EVENT_AVAILABILITY,
     EVENT_CIRCUIT,
     EVENT_LIGHTGROUP,
 )
@@ -44,6 +45,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class CircuitLight(CoordinatorEntity, LightEntity):
     """Light entity for njsPC-HA."""
 
+
     def __init__(self, coordinator, circuit, lightthemes, event, command):
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -51,6 +53,7 @@ class CircuitLight(CoordinatorEntity, LightEntity):
         self._lightthemes = lightthemes
         self._event = event
         self._command = command
+        self._available = True
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -59,6 +62,9 @@ class CircuitLight(CoordinatorEntity, LightEntity):
             and self.coordinator.data["id"] == self._circuit["id"]
         ):
             self._circuit = self.coordinator.data
+            self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
             self.async_write_ha_state()
 
     async def async_turn_on(self, **kwargs):
@@ -91,6 +97,14 @@ class CircuitLight(CoordinatorEntity, LightEntity):
         """Turn the entity on."""
         data = {"id": self._circuit["id"], "state": False}
         await self.coordinator.api.command(self._command, data)
+
+    @property
+    def should_poll(self):
+        return False
+
+    @property
+    def available(self):
+        return self._available
 
     @property
     def name(self):

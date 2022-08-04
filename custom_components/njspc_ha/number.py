@@ -1,4 +1,4 @@
-from .const import API_CHLORINATOR_POOL_SETPOINT, API_CHLORINATOR_SPA_SETPOINT, DOMAIN, EVENT_CHLORINATOR, POOL_SETPOINT, SPA_SETPOINT
+from .const import API_CHLORINATOR_POOL_SETPOINT, API_CHLORINATOR_SPA_SETPOINT, DOMAIN, EVENT_AVAILABILITY, EVENT_CHLORINATOR, POOL_SETPOINT, SPA_SETPOINT
 from homeassistant.const import PERCENTAGE
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.number import NumberEntity
@@ -31,6 +31,7 @@ class SWGNumber(CoordinatorEntity, NumberEntity):
         self._type = type
         self._command = command
         self._value = chlorinator[type]
+        self._available = True
         
 
     def _handle_coordinator_update(self) -> None:
@@ -41,12 +42,23 @@ class SWGNumber(CoordinatorEntity, NumberEntity):
         ):
             self._value = self.coordinator.data[self._type]
             self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
 
     async def async_set_native_value(self, value: float) -> None:
         """Update the current value."""
         new_value = int(value)
         data = {"id": self._chlorinator["id"], "setPoint": new_value}
         await self.coordinator.api.command(self._command, data)
+
+    @property
+    def should_poll(self):
+        return False
+
+    @property
+    def available(self):
+        return self._available
 
     @property
     def name(self):

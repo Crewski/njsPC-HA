@@ -10,7 +10,7 @@ from homeassistant.const import (
 from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT, SensorEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, EVENT_CHLORINATOR, EVENT_PUMP, EVENT_TEMPS
+from .const import DOMAIN, EVENT_AVAILABILITY, EVENT_CHLORINATOR, EVENT_PUMP, EVENT_TEMPS
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
@@ -41,20 +41,30 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class TempSensor(CoordinatorEntity, SensorEntity):
     """Temp Sensor for njsPC-HA"""
 
-    should_poll = False
-
     def __init__(self, coordinator, key, units):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._key = key
         self._units = units
         self._value = round(coordinator.api._config["temps"][key], 1)
+        self._available = True
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         if self.coordinator.data["event"] == EVENT_TEMPS:
             self._value = round(self.coordinator.data[self._key], 1)
             self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self):
+        return False
+
+    @property
+    def available(self):
+        return self._available
 
     @property
     def name(self):
@@ -86,13 +96,12 @@ class TempSensor(CoordinatorEntity, SensorEntity):
 class RPMSensor(CoordinatorEntity, SensorEntity):
     """RPM Pump Sensor for njsPC-HA"""
 
-    should_poll = False
-
     def __init__(self, coordinator, pump):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._pump = pump
         self._value = pump["rpm"]
+        self._available = True
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -102,6 +111,17 @@ class RPMSensor(CoordinatorEntity, SensorEntity):
         ):
             self._value = self.coordinator.data["rpm"]
             self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self):
+        return False
+
+    @property
+    def available(self):
+        return self._available
 
     @property
     def name(self):
@@ -144,13 +164,13 @@ class RPMSensor(CoordinatorEntity, SensorEntity):
 class PowerSensor(CoordinatorEntity, SensorEntity):
     """Watts Pump Sensor for njsPC-HA"""
 
-    should_poll = False
 
     def __init__(self, coordinator, pump):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._pump = pump
         self._value = pump["watts"]
+        self._available = True
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -160,6 +180,17 @@ class PowerSensor(CoordinatorEntity, SensorEntity):
         ):
             self._value = self.coordinator.data["watts"]
             self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self):
+        return False
+
+    @property
+    def available(self):
+        return self._available
 
     @property
     def name(self):
@@ -194,13 +225,12 @@ class PowerSensor(CoordinatorEntity, SensorEntity):
 class SaltSensor(CoordinatorEntity, SensorEntity):
     """SWG Salt Sensor for njsPC-HA"""
 
-    should_poll = False
-
     def __init__(self, coordinator, chlorinator):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._chlorinator = chlorinator
         self._value = chlorinator["saltLevel"]
+        self._available = True
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -210,6 +240,17 @@ class SaltSensor(CoordinatorEntity, SensorEntity):
         ):
             self._chlorinator = self.coordinator.data
             self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self):
+        return False
+
+    @property
+    def available(self):
+        return self._available
 
     @property
     def name(self):
@@ -253,13 +294,12 @@ class SaltSensor(CoordinatorEntity, SensorEntity):
 class StatusSensor(CoordinatorEntity, SensorEntity):
     """Equipment Status Sensor for njsPC-HA"""
 
-    should_poll = False
-
     def __init__(self, coordinator, equipment, event):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._equipment = equipment
         self._event = event
+        self._available = True
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -269,6 +309,17 @@ class StatusSensor(CoordinatorEntity, SensorEntity):
         ):
             self._equipment = self.coordinator.data
             self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self):
+        return False
+
+    @property
+    def available(self):
+        return self._available
 
     @property
     def name(self):

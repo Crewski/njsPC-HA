@@ -26,6 +26,7 @@ EVENT_PUMP = "pump"
 EVENT_LIGHTGROUP = "lightGroup"
 EVENT_CIRCUITGROUP = "circuitGroup"
 EVENT_FEATURE = "feature"
+EVENT_AVAILABILITY = "availability"
 
 POOL_SETPOINT = "poolSetpoint"
 SPA_SETPOINT = "spaSetpoint"

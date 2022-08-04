@@ -13,7 +13,7 @@ from homeassistant.const import ATTR_TEMPERATURE, TEMP_FAHRENHEIT, TEMP_CELSIUS
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, EVENT_BODY
+from .const import DOMAIN, EVENT_AVAILABILITY, EVENT_BODY
 
 NJSPC_HVAC_ACTION_TO_HASS = {
     # Map to None if we do not know how to represent.
@@ -52,6 +52,7 @@ class Climate(CoordinatorEntity, ClimateEntity):
         self._body = body
         self._heatmodes = heatmodes
         self._units = units
+        self._available = True
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -61,6 +62,17 @@ class Climate(CoordinatorEntity, ClimateEntity):
         ):
             self._body = self.coordinator.data
             self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self):
+        return False
+
+    @property
+    def available(self):
+        return self._available
 
     @property
     def name(self):
