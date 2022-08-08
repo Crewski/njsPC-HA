@@ -34,6 +34,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         new_devices.append(StatusSensor(coordinator, pump, EVENT_PUMP))
     for chlorinator in coordinator.api._config["chlorinators"]:
         new_devices.append(SaltSensor(coordinator, chlorinator))
+        new_devices.append(TargetSensor(coordinator, chlorinator))
         new_devices.append(StatusSensor(coordinator, chlorinator, EVENT_CHLORINATOR))
     if new_devices:
         async_add_entities(new_devices)
