@@ -1,9 +1,6 @@
 """Platform for climate integration."""
 
 from homeassistant.components.climate.const import (
-    # HVAC_MODE_AUTO,
-    # HVAC_MODE_OFF,
-    # HVAC_MODE_HEAT,
     HVAC_MODES,
     ClimateEntityFeature,
     HVACAction,
@@ -27,6 +24,7 @@ NJSPC_HVAC_ACTION_TO_HASS = {
     128: HVACAction.OFF,
 }
 
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Add climates for passed config_entry in HA."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
@@ -37,7 +35,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         _heatmodes = {}
         for mode in await coordinator.api.get_heatmodes(body["id"]):
             _heatmodes[mode["val"]] = mode["desc"]
-        new_devices.append(Climate(coordinator, body, _heatmodes, _units))
+        _has_cooling = await coordinator.api.has_cooling(body["type"]["val"])
+        new_devices.append(Climate(coordinator, body, _heatmodes, _units, _has_cooling))
 
     if new_devices:
         async_add_entities(new_devices)
@@ -46,13 +45,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 class Climate(CoordinatorEntity, ClimateEntity):
     """Climate entity for njsPC-HA"""
 
-    def __init__(self, coordinator, body, heatmodes, units):
+    def __init__(self, coordinator, body, heatmodes, units, has_cooling):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._body = body
         self._heatmodes = heatmodes
         self._units = units
         self._available = True
+        self._has_cooling = has_cooling
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -88,7 +88,15 @@ class Climate(CoordinatorEntity, ClimateEntity):
 
     @property
     def target_temperature(self) -> float:
-        return self._body["setPoint"]
+        return self._body["setPoint"] if self._has_cooling is False else None
+
+    @property
+    def target_temperature_high(self) -> float:
+        return self._body["coolSetpoint"] if self._has_cooling is True else None
+
+    @property
+    def target_temperature_low(self) -> float:
+        return self._body["setPoint"] if self._has_cooling is True else None
 
     @property
     def current_temperature(self) -> float:
@@ -106,7 +114,6 @@ class Climate(CoordinatorEntity, ClimateEntity):
         except:
             # default to pool
             return 70 if self._units == 0 else 21
-        
 
     @property
     def max_temp(self) -> float:
@@ -120,19 +127,23 @@ class Climate(CoordinatorEntity, ClimateEntity):
         except:
             # default to pool
             return 95 if self._units == 0 else 35
-        
 
     @property
     def hvac_modes(self) -> list[HVAC_MODES]:
         # if only off and heat are options, add them as modes, else use presets
-        return [HVACMode.OFF, HVACMode.HEAT] if len(self._heatmodes) <= 2 else [HVACMode.AUTO]
-        # return [HVAC_MODE_AUTO]
+        _on: HVACMode = (
+            HVACMode.HEAT_COOL if self._has_cooling is True else HVACMode.HEAT
+        )
+        return [HVACMode.OFF, _on] if len(self._heatmodes) <= 2 else [HVACMode.AUTO]
 
     @property
     def hvac_mode(self) -> HVACMode:
         if len(self._heatmodes) <= 2:
             # if heatMode is 0/1 it is off, anything else is heat
-            return HVACMode.OFF if self._body["heatMode"]["val"] <= 1 else HVACMode.HEAT
+            _on: HVACMode = (
+                HVACMode.HEAT_COOL if self._has_cooling is True else HVACMode.HEAT
+            )
+            return HVACMode.OFF if self._body["heatMode"]["val"] <= 1 else _on
         return HVACMode.AUTO
 
     @property
@@ -145,7 +156,7 @@ class Climate(CoordinatorEntity, ClimateEntity):
             return "Off"
 
     @property
-    def preset_modes(self) -> list[str]:        
+    def preset_modes(self) -> list[str]:
         if len(self._heatmodes) <= 2:
             return None
         _modes = []
@@ -162,15 +173,34 @@ class Climate(CoordinatorEntity, ClimateEntity):
 
     @property
     def supported_features(self) -> int:
-        
-        if len(self._heatmodes) <= 2:
-            return (ClimateEntityFeature.TARGET_TEMPERATURE)
-        return (
-            ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.PRESET_MODE
-        )
+        if len(self._heatmodes) <= 2 and self._has_cooling is True:
+            # only 1 heater that supports cooling
+            return ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+        elif len(self._heatmodes) <= 2:
+            # only 1 heater that doesn't support cooling
+            return ClimateEntityFeature.TARGET_TEMPERATURE
+        elif self._has_cooling is True:
+            # multiple heaters that support cooling
+            return (
+                ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+                | ClimateEntityFeature.PRESET_MODE
+            )
+        else:
+            # multiple heaters that don't support cooling
+            return (
+                ClimateEntityFeature.TARGET_TEMPERATURE
+                | ClimateEntityFeature.PRESET_MODE
+            )
 
     async def async_set_temperature(self, **kwargs) -> None:
-        data = {"id": self._body["id"], "heatSetpoint": kwargs.get(ATTR_TEMPERATURE)}
+        data = {"id": self._body["id"]}
+        if "target_temp_low" in kwargs:
+            data["heatSetpoint"] = kwargs.get("target_temp_low")
+        if "target_temp_high" in kwargs:
+            data["coolSetpoint"] = kwargs.get("target_temp_high")
+        if ATTR_TEMPERATURE in kwargs:
+            data["heatSetpoint"] = kwargs.get(ATTR_TEMPERATURE)
+        # data = {"id": self._body["id"], "heatSetpoint": kwargs.get(ATTR_TEMPERATURE)}
         await self.coordinator.api.command("state/body/setPoint", data)
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
@@ -186,7 +216,7 @@ class Climate(CoordinatorEntity, ClimateEntity):
                 self.coordinator.logger.error(
                     "Invalid mode for set_hvac_mode: %s", hvac_mode
                 )
-                return            
+                return
             data = {"id": self._body["id"], "mode": njspc_value}
             await self.coordinator.api.command("state/body/heatMode", data)
         return

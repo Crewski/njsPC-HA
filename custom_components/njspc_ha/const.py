@@ -16,6 +16,7 @@ API_CONFIG_BODY = "config/body"
 API_HEATMODES = "heatModes"
 API_CONFIG_CIRCUIT = "config/circuit"
 API_LIGHTTHEMES = "lightThemes"
+API_CONFIG_HEATERS = "config/options/heaters"
 
 # SOCKETIO EVENTS
 EVENT_CIRCUIT = "circuit"

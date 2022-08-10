@@ -14,6 +14,7 @@ from homeassistant.helpers import aiohttp_client
 from .const import (
     API_CONFIG_BODY,
     API_CONFIG_CIRCUIT,
+    API_CONFIG_HEATERS,
     API_HEATMODES,
     API_LIGHTTHEMES,
     API_STATE_ALL,
@@ -89,7 +90,14 @@ class NjsPCHAdata(DataUpdateCoordinator):
 
     async def sio_connect(self):
         """Method to connect to njs-PoolController"""
-        self.sio = socketio.AsyncClient(reconnection=True, reconnection_attempts=0, reconnection_delay=1, reconnection_delay_max=10, logger=False, engineio_logger=False)
+        self.sio = socketio.AsyncClient(
+            reconnection=True,
+            reconnection_attempts=0,
+            reconnection_delay=1,
+            reconnection_delay_max=10,
+            logger=False,
+            engineio_logger=False,
+        )
 
         @self.sio.on("temps")
         async def handle_temps(data):
@@ -206,6 +214,38 @@ class NjsPCHAapi:
             else:
                 _LOGGER.error(await resp.text())
                 return
+
+    async def has_cooling(self, body) -> bool:
+        """Check to see if any of the heaters have cooling enabled"""
+        _has_cooling: bool = False
+        async with self._session.get(f"{self._base_url}/{API_CONFIG_HEATERS}") as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                for heater in data["heaters"]:
+                    if "coolingEnabled" in heater:
+                        # only run if cooling enabled is a key
+                        if body == 0:
+                            if (
+                                heater["body"] == 0 or heater["body"] == 32
+                            ) and "coolingEnabled" in heater:
+                                _has_cooling = (
+                                    True
+                                    if heater["coolingEnabled"] is True
+                                    else _has_cooling
+                                )
+
+                        else:
+                            if heater["body"] == 1 or heater["body"] == 32:
+                                _has_cooling = (
+                                    True
+                                    if heater["coolingEnabled"] is True
+                                    else _has_cooling
+                                )
+                return _has_cooling
+
+            else:
+                _LOGGER.error(await resp.text())
+                return _has_cooling
 
     def get_unique_id(self, name) -> str:
         """Create a unique id for entity"""
