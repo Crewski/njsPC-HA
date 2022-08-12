@@ -29,6 +29,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     """Add climates for passed config_entry in HA."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
 
+    if len(coordinator.api._config["heaters"]) == 0:
+        # no heaters are available
+        return
+
     new_devices = []
     _units = coordinator.api._config["temps"]["units"]["val"]
     for body in coordinator.api._config["temps"]["bodies"]:
@@ -46,7 +50,7 @@ class Climate(CoordinatorEntity, ClimateEntity):
     """Climate entity for njsPC-HA"""
 
     def __init__(self, coordinator, body, heatmodes, units, has_cooling):
-        """Initialize the sensor."""
+        """Initialize the climate."""
         super().__init__(coordinator)
         self._body = body
         self._heatmodes = heatmodes
@@ -68,42 +72,52 @@ class Climate(CoordinatorEntity, ClimateEntity):
 
     @property
     def should_poll(self):
+        """Do not need to poll"""
         return False
 
     @property
     def available(self):
+        """Entity availability"""
         return self._available
 
     @property
     def name(self):
+        """Set name of entity"""
         return self._body["name"] + " Heater"
 
     @property
     def unique_id(self):
+        """Set unique id"""
         return self.coordinator.api.get_unique_id(f'heater_{self._body["id"]}')
 
     @property
     def temperature_unit(self) -> str:
+        """Set temperature units"""
         return TEMP_FAHRENHEIT if self._units == 0 else TEMP_CELSIUS
 
     @property
     def target_temperature(self) -> float:
+        """Set target temp if cooling isn't enabled"""
         return self._body["setPoint"] if self._has_cooling is False else None
 
     @property
     def target_temperature_high(self) -> float:
+        """Set cooling temp if cooling is enabled"""
         return self._body["coolSetpoint"] if self._has_cooling is True else None
 
     @property
     def target_temperature_low(self) -> float:
+        """Set heating temp if cooling is enabled"""
         return self._body["setPoint"] if self._has_cooling is True else None
 
     @property
     def current_temperature(self) -> float:
+        """Get current temp"""
         return self._body["temp"]
 
     @property
     def min_temp(self) -> float:
+        """Set min temp specific to body type"""
         try:
             if self._body["type"]["val"] == 0:
                 # pool setpoint
@@ -117,6 +131,7 @@ class Climate(CoordinatorEntity, ClimateEntity):
 
     @property
     def max_temp(self) -> float:
+        """Set max temp specific to body type"""
         try:
             if self._body["type"]["val"] == 0:
                 # pool setpoint
@@ -130,7 +145,7 @@ class Climate(CoordinatorEntity, ClimateEntity):
 
     @property
     def hvac_modes(self) -> list[HVAC_MODES]:
-        # if only off and heat are options, add them as modes, else use presets
+        """if only off and heat are options, add them as modes, else use presets"""
         _on: HVACMode = (
             HVACMode.HEAT_COOL if self._has_cooling is True else HVACMode.HEAT
         )

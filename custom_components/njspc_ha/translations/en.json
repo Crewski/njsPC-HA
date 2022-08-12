@@ -10,6 +10,7 @@
         },
         "step": {
             "user": {
+                "description": "Enter the IP address of your nodejs-PoolController instance.",
                 "data": {
                     "host": "Host",
                     "port": "Port"

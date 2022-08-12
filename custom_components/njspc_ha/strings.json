@@ -2,6 +2,7 @@
   "config": {
     "step": {
       "user": {
+        "description": "Enter the IP address of your nodejs-PoolController instance.",
         "data": {
           "host": "[%key:common::config_flow::data::host%]",
           "port": "[%key:common::config_flow::data::port%]"

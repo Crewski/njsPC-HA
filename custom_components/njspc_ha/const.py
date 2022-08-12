@@ -17,6 +17,9 @@ API_HEATMODES = "heatModes"
 API_CONFIG_CIRCUIT = "config/circuit"
 API_LIGHTTHEMES = "lightThemes"
 API_CONFIG_HEATERS = "config/options/heaters"
+API_CONFIG_CHLORINATOR = "config/chlorinator"
+API_LIGHTCOMMANDS = "lightCommands"
+API_LIGHT_RUNCOMMAND = "state/light/runCommand"
 
 # SOCKETIO EVENTS
 EVENT_CIRCUIT = "circuit"

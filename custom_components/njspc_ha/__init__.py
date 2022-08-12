@@ -18,6 +18,7 @@ from .const import (
     API_HEATMODES,
     API_LIGHTTHEMES,
     API_STATE_ALL,
+    API_LIGHTCOMMANDS,
     DOMAIN,
     EVENT_AVAILABILITY,
     EVENT_BODY,
@@ -35,6 +36,7 @@ PLATFORMS: list[Platform] = [
     Platform.CLIMATE,
     Platform.NUMBER,
     Platform.LIGHT,
+    Platform.BUTTON
 ]
 
 
@@ -75,7 +77,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 class NjsPCHAdata(DataUpdateCoordinator):
-    """Data coordinator for receiving from njs-PoolController"""
+    """Data coordinator for receiving from nodejs-PoolController"""
 
     def __init__(self, hass: HomeAssistant, api: NjsPCHAapi):
         """Initialize data coordinator."""
@@ -89,7 +91,7 @@ class NjsPCHAdata(DataUpdateCoordinator):
         self.sio = None
 
     async def sio_connect(self):
-        """Method to connect to njs-PoolController"""
+        """Method to connect to nodejs-PoolController"""
         self.sio = socketio.AsyncClient(
             reconnection=True,
             reconnection_attempts=0,
@@ -167,7 +169,7 @@ class NjsPCHAdata(DataUpdateCoordinator):
 
 
 class NjsPCHAapi:
-    """API for sending data to njs-PoolController"""
+    """API for sending data to nodejs-PoolController"""
 
     def __init__(self, hass: HomeAssistant, data) -> None:
         self.hass = hass
@@ -177,7 +179,7 @@ class NjsPCHAapi:
         self._session = None
 
     async def command(self, url: str, data):
-        """Send commands to njs-PoolController via PUT request"""
+        """Send commands to nodejs-PoolController via PUT request"""
         async with self._session.put(f"{self._base_url}/{url}", json=data) as resp:
             if resp.status == 200:
                 pass
@@ -185,7 +187,7 @@ class NjsPCHAapi:
                 _LOGGER.error(await resp.text())
 
     async def get_config(self):
-        """Let the initial config fro njs-PoolController"""
+        """Let the initial config from nodejs-PoolController"""
         self._session = aiohttp_client.async_get_clientsession(self.hass)
         async with self._session.get(f"{self._base_url}/{API_STATE_ALL}") as resp:
             if resp.status == 200:
@@ -205,9 +207,20 @@ class NjsPCHAapi:
                 return
 
     async def get_lightthemes(self, id):
-        """Get the available heat modes for body"""
+        """Get list of themes for light"""
         async with self._session.get(
             f"{self._base_url}/{API_CONFIG_CIRCUIT}/{id}/{API_LIGHTTHEMES}"
+        ) as resp:
+            if resp.status == 200:
+                return await resp.json()
+            else:
+                _LOGGER.error(await resp.text())
+                return
+
+    async def get_lightcommands(self, id):
+        """Get light commands for lights"""
+        async with self._session.get(
+            f"{self._base_url}/{API_CONFIG_CIRCUIT}/{id}/{API_LIGHTCOMMANDS}"
         ) as resp:
             if resp.status == 200:
                 return await resp.json()
