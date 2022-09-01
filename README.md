@@ -24,6 +24,7 @@ njsPC-HA communicates with nodejs-PoolController via the native API, the same wa
 - Pumps
     - RPM
     - Watts
+    - Flow
     - Status
 - Lights
     - light shows / colors show up as effects in Home Assistant

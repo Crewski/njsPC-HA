@@ -31,6 +31,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     for pump in coordinator.api._config["pumps"]:
         new_devices.append(RPMSensor(coordinator, pump))
         new_devices.append(PowerSensor(coordinator, pump))
+        if 'flow' in pump:      # for pumps that have a flow reading
+            new_devices.append(FlowSensor(coordinator, pump))
         new_devices.append(StatusSensor(coordinator, pump, EVENT_PUMP))
     for chlorinator in coordinator.api._config["chlorinators"]:
         new_devices.append(SaltSensor(coordinator, chlorinator))
@@ -222,6 +224,74 @@ class PowerSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_unit_of_measurement(self) -> str:
         return POWER_WATT
+
+class FlowSensor(CoordinatorEntity, SensorEntity):
+    """Flow Pump Sensor for njsPC-HA"""
+
+    def __init__(self, coordinator, pump):
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._pump = pump
+        self._value = pump["flow"]
+        self._available = True
+
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if (
+            self.coordinator.data["event"] == EVENT_PUMP
+            and self.coordinator.data["id"] == self._pump["id"]
+        ):
+            self._value = self.coordinator.data["flow"]
+            self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self):
+        return False
+
+    @property
+    def available(self):
+        return self._available
+
+    @property
+    def name(self):
+        """Name of the sensor"""
+        return self._pump["name"] + " Flow"
+
+    @property
+    def unique_id(self):
+        """ID of the sensor"""
+        return self.coordinator.api.get_unique_id(f'pump_{self._pump["id"]}_gpm')
+
+    @property
+    def state_class(self):
+        """State class of the sensor"""
+        return STATE_CLASS_MEASUREMENT
+
+    @property
+    def native_value(self):
+        """Raw value of the sensor"""
+        return self._value
+
+    @property
+    def native_unit_of_measurement(self):
+        """Unit of measurement of the sensor"""
+        return "GPM"
+
+    @property
+    def icon(self) -> str:
+        return "mdi:pump"
+
+    @property
+    def extra_state_attributes(self):
+        """Return entity specific state attributes."""
+        return {
+            "min_flow": self._pump["minFlow"],
+            "max_flow": self._pump["maxFlow"],
+        }
+
 
 
 class SaltSensor(CoordinatorEntity, SensorEntity):
