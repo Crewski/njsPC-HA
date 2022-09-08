@@ -43,6 +43,8 @@ njsPC-HA communicates with nodejs-PoolController via the native API, the same wa
     - Salt level
         - Salt target and salt needed are attributes
     - Status
+    - Salt Target
+    - Salt Needed
 
 ## Not Supported
 - pH/Orp
