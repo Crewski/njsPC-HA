@@ -14,14 +14,15 @@ from .const import DOMAIN, EVENT_AVAILABILITY, EVENT_BODY
 
 NJSPC_HVAC_ACTION_TO_HASS = {
     # Map to None if we do not know how to represent.
-    0: HVACAction.OFF,
-    1: HVACAction.HEATING,
-    2: HVACAction.HEATING,
-    3: HVACAction.COOLING,
-    4: HVACAction.HEATING,
-    6: HVACAction.HEATING,
-    8: HVACAction.COOLING,
-    128: HVACAction.OFF,
+    'off':      HVACAction.OFF,
+    'heater':   HVACAction.HEATING,
+    'solar':    HVACAction.HEATING,
+    'hpheat':   HVACAction.HEATING,
+    'hybheat':  HVACAction.HEATING,
+    'mtheat':   HVACAction.HEATING,
+    'cooling':  HVACAction.COOLING,
+    'hpcool':   HVACAction.COOLING,
+    'cooldown': HVACAction.OFF,
 }
 
 
@@ -182,7 +183,7 @@ class Climate(CoordinatorEntity, ClimateEntity):
     @property
     def hvac_action(self) -> HVACAction:
         try:
-            return NJSPC_HVAC_ACTION_TO_HASS[self._body["heatStatus"]["val"]]
+            return NJSPC_HVAC_ACTION_TO_HASS[self._body["heatStatus"]["name"]]
         except:
             return HVACAction.OFF
 
