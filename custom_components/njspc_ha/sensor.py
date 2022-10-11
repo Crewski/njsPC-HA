@@ -58,6 +58,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             new_devices.append(SaltSensor(coordinator, chlorinator))
         if CURRENT_OUTPUT in chlorinator:
             new_devices.append(CurrentOutputSensor(coordinator, chlorinator))
+        if TARGET_OUTPUT in chlorinator:
+            new_devices.append(TargetOutputSensor(coordinator, chlorinator))
         if SALT_REQUIRED in chlorinator:
             new_devices.append(SaltRequiredSensor(coordinator, chlorinator))
         if SALT_TARGET in chlorinator:
@@ -640,3 +642,65 @@ class CurrentOutputSensor(CoordinatorEntity, SensorEntity):
     def extra_state_attributes(self):
         """Return entity specific state attributes."""
         return {"target_output": self._chlorinator[TARGET_OUTPUT]}
+
+class TargetOutputSensor(CoordinatorEntity, SensorEntity):
+    """SWG Salt Sensor for njsPC-HA"""
+
+    def __init__(self, coordinator, chlorinator):
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._chlorinator = chlorinator
+        self._value = chlorinator[TARGET_OUTPUT]
+        self._available = True
+
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if (
+            self.coordinator.data["event"] == EVENT_CHLORINATOR
+            and self.coordinator.data["id"] == self._chlorinator["id"]            
+            and TARGET_OUTPUT in self.coordinator.data    # make sure the data we are looking for is in the coordinator data
+        ):
+            self._value = self.coordinator.data[TARGET_OUTPUT]
+            self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self):
+        return False
+
+    @property
+    def available(self):
+        return self._available
+
+    @property
+    def name(self):
+        """Name of the sensor"""
+        return self._chlorinator["name"] + " Target Output"
+
+    @property
+    def unique_id(self):
+        """ID of the sensor"""
+        return self.coordinator.api.get_unique_id(
+            f'salttargetoutput_{self._chlorinator["id"]}'
+        )
+
+    @property
+    def state_class(self):
+        """State class of the sensor"""
+        return STATE_CLASS_MEASUREMENT
+
+    @property
+    def native_value(self):
+        """Raw value of the sensor"""
+        return self._value
+
+    @property
+    def icon(self):
+        return "mdi:target"
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        return PERCENTAGE
+
