@@ -19,7 +19,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             if circuit["type"]["isLight"]:
                 for theme in await coordinator.api.get_lightcommands(circuit["id"]):
                     new_devices.append(
-                        LightCommandButton(coordinator, circuit["id"], theme["name"], f'{circuit["name"]} {theme["desc"]}')
+                        LightCommandButton(coordinator, circuit["id"], theme["name"], f'{circuit["name"]} {theme[DESC]}')
                     )
         except KeyError:
             pass

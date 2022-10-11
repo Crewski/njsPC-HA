@@ -39,7 +39,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     for body in coordinator.api._config["temps"]["bodies"]:
         _heatmodes = {}
         for mode in await coordinator.api.get_heatmodes(body["id"]):
-            _heatmodes[mode["val"]] = mode["desc"]
+            _heatmodes[mode["val"]] = mode[DESC]
         _has_cooling = await coordinator.api.has_cooling(body["type"]["val"])
         new_devices.append(Climate(coordinator, body, _heatmodes, _units, _has_cooling))
 

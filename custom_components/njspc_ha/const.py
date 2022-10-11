@@ -34,3 +34,16 @@ EVENT_AVAILABILITY = "availability"
 
 POOL_SETPOINT = "poolSetpoint"
 SPA_SETPOINT = "spaSetpoint"
+
+# KEYS
+SALT_TARGET = "saltTarget"
+SALT_LEVEL = "saltLevel"
+SALT_REQUIRED = "saltRequired"
+RPM = "rpm"
+WATTS = "watts"
+FLOW = "flow"
+STATUS = "status"
+DESC = "desc"
+CURRENT_OUTPUT = "currentOutput"
+TARGET_OUTPUT = "targetOutput"
+SUPER_CHLOR = "superChlor"

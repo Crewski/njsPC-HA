@@ -13,11 +13,21 @@ from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT, SensorEntit
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
+    CURRENT_OUTPUT,
+    DESC,
     DOMAIN,
     EVENT_AVAILABILITY,
     EVENT_CHLORINATOR,
     EVENT_PUMP,
     EVENT_TEMPS,
+    FLOW,
+    RPM,
+    SALT_LEVEL,
+    SALT_REQUIRED,
+    SALT_TARGET,
+    STATUS,
+    TARGET_OUTPUT,
+    WATTS,
 )
 
 
@@ -36,17 +46,26 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 )
             )
     for pump in coordinator.api._config["pumps"]:
-        new_devices.append(RPMSensor(coordinator, pump))
-        new_devices.append(PowerSensor(coordinator, pump))
-        if "flow" in pump:  # for pumps that have a flow reading
+        if RPM in pump:
+            new_devices.append(RPMSensor(coordinator, pump))
+        if WATTS in pump:
+            new_devices.append(PowerSensor(coordinator, pump))
+        if FLOW in pump:  # for pumps that have a flow reading
             new_devices.append(FlowSensor(coordinator, pump))
         new_devices.append(StatusSensor(coordinator, pump, EVENT_PUMP))
     for chlorinator in coordinator.api._config["chlorinators"]:
-        new_devices.append(SaltSensor(coordinator, chlorinator))
-        new_devices.append(TargetSensor(coordinator, chlorinator))
-        new_devices.append(SaltRequiredSensor(coordinator, chlorinator))
-        new_devices.append(SaltTargetSensor(coordinator, chlorinator))
-        new_devices.append(StatusSensor(coordinator, chlorinator, EVENT_CHLORINATOR))
+        if SALT_LEVEL in chlorinator:
+            new_devices.append(SaltSensor(coordinator, chlorinator))
+        if CURRENT_OUTPUT in chlorinator:
+            new_devices.append(CurrentOutputSensor(coordinator, chlorinator))
+        if TARGET_OUTPUT in chlorinator:
+            new_devices.append(TargetOutputSensor(coordinator, chlorinator))
+        if SALT_REQUIRED in chlorinator:
+            new_devices.append(SaltRequiredSensor(coordinator, chlorinator))
+        if SALT_TARGET in chlorinator:
+            new_devices.append(SaltTargetSensor(coordinator, chlorinator))
+        new_devices.append(StatusSensor(
+            coordinator, chlorinator, EVENT_CHLORINATOR))
     if new_devices:
         async_add_entities(new_devices)
 
@@ -64,7 +83,7 @@ class TempSensor(CoordinatorEntity, SensorEntity):
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
-        if self.coordinator.data["event"] == EVENT_TEMPS:
+        if (self.coordinator.data["event"] == EVENT_TEMPS and self._key in self.coordinator.data):    # make sure the data we are looking for is in the coordinator data
             self._value = round(self.coordinator.data[self._key], 1)
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
@@ -113,7 +132,7 @@ class RPMSensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._pump = pump
-        self._value = pump["rpm"]
+        self._value = pump[RPM]
         self._available = True
 
     def _handle_coordinator_update(self) -> None:
@@ -121,8 +140,10 @@ class RPMSensor(CoordinatorEntity, SensorEntity):
         if (
             self.coordinator.data["event"] == EVENT_PUMP
             and self.coordinator.data["id"] == self._pump["id"]
+            # make sure the data we are looking for is in the coordinator data
+            and RPM in self.coordinator.data
         ):
-            self._value = self.coordinator.data["rpm"]
+            self._value = self.coordinator.data[RPM]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
@@ -181,7 +202,7 @@ class PowerSensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._pump = pump
-        self._value = pump["watts"]
+        self._value = pump[WATTS]
         self._available = True
 
     def _handle_coordinator_update(self) -> None:
@@ -189,8 +210,9 @@ class PowerSensor(CoordinatorEntity, SensorEntity):
         if (
             self.coordinator.data["event"] == EVENT_PUMP
             and self.coordinator.data["id"] == self._pump["id"]
+            and WATTS in self.coordinator.data    # make sure the data we are looking for is in the coordinator data
         ):
-            self._value = self.coordinator.data["watts"]
+            self._value = self.coordinator.data[WATTS]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
@@ -241,7 +263,7 @@ class FlowSensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._pump = pump
-        self._value = pump["flow"]
+        self._value = pump[FLOW]
         self._available = True
 
     def _handle_coordinator_update(self) -> None:
@@ -249,8 +271,9 @@ class FlowSensor(CoordinatorEntity, SensorEntity):
         if (
             self.coordinator.data["event"] == EVENT_PUMP
             and self.coordinator.data["id"] == self._pump["id"]
+            and FLOW in self.coordinator.data    # make sure the data we are looking for is in the coordinator data
         ):
-            self._value = self.coordinator.data["flow"]
+            self._value = self.coordinator.data[FLOW]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
@@ -309,7 +332,7 @@ class SaltSensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._chlorinator = chlorinator
-        self._value = chlorinator["saltLevel"]
+        self._value = chlorinator[SALT_LEVEL]
         self._available = True
 
     def _handle_coordinator_update(self) -> None:
@@ -317,8 +340,10 @@ class SaltSensor(CoordinatorEntity, SensorEntity):
         if (
             self.coordinator.data["event"] == EVENT_CHLORINATOR
             and self.coordinator.data["id"] == self._chlorinator["id"]
+            and SALT_LEVEL in self.coordinator.data    # make sure the data we are looking for is in the coordinator data
         ):
-            self._chlorinator = self.coordinator.data
+            # self._chlorinator = self.coordinator.data
+            self._value = self.coordinator.data[SALT_LEVEL]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
@@ -352,7 +377,8 @@ class SaltSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         """Raw value of the sensor"""
-        return self._chlorinator["saltLevel"]
+        # return self._chlorinator[SALT_LEVEL]
+        return self._value
 
     @property
     def icon(self):
@@ -366,8 +392,8 @@ class SaltSensor(CoordinatorEntity, SensorEntity):
     def extra_state_attributes(self):
         """Return entity specific state attributes."""
         return {
-            "salt_target": self._chlorinator["saltTarget"],
-            "salt_required": self._chlorinator["saltRequired"],
+            "salt_target": self._chlorinator[SALT_TARGET],
+            "salt_required": self._chlorinator[SALT_REQUIRED],
         }
 
 
@@ -378,7 +404,7 @@ class SaltTargetSensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._chlorinator = chlorinator
-        self._value = chlorinator["saltTarget"]
+        self._value = chlorinator[SALT_TARGET]
         self._available = True
 
     def _handle_coordinator_update(self) -> None:
@@ -386,6 +412,7 @@ class SaltTargetSensor(CoordinatorEntity, SensorEntity):
         if (
             self.coordinator.data["event"] == EVENT_CHLORINATOR
             and self.coordinator.data["id"] == self._chlorinator["id"]
+            and SALT_TARGET in self.coordinator.data    # make sure the data we are looking for is in the coordinator data
         ):
             self._chlorinator = self.coordinator.data
             self.async_write_ha_state()
@@ -421,7 +448,8 @@ class SaltTargetSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         """Raw value of the sensor"""
-        return self._chlorinator["saltTarget"]
+        # return self._chlorinator[SALT_TARGET]
+        return self._value
 
     @property
     def icon(self):
@@ -439,7 +467,7 @@ class SaltRequiredSensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._chlorinator = chlorinator
-        self._value = chlorinator["saltRequired"]
+        self._value = chlorinator[SALT_REQUIRED]
         self._available = True
 
     def _handle_coordinator_update(self) -> None:
@@ -447,8 +475,9 @@ class SaltRequiredSensor(CoordinatorEntity, SensorEntity):
         if (
             self.coordinator.data["event"] == EVENT_CHLORINATOR
             and self.coordinator.data["id"] == self._chlorinator["id"]
+            and SALT_REQUIRED in self.coordinator.data    # make sure the data we are looking for is in the coordinator data
         ):
-            self._chlorinator = self.coordinator.data
+            self._value = self.coordinator.data[SALT_REQUIRED]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
@@ -482,7 +511,8 @@ class SaltRequiredSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         """Raw value of the sensor"""
-        return self._chlorinator["saltRequired"]
+        # return self._chlorinator[SALT_REQUIRED]
+        return self._value
 
     @property
     def icon(self):
@@ -500,6 +530,7 @@ class StatusSensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._equipment = equipment
+        self._value = self._equipment[STATUS][DESC]
         self._event = event
         self._available = True
 
@@ -509,7 +540,7 @@ class StatusSensor(CoordinatorEntity, SensorEntity):
             self.coordinator.data["event"] == self._event
             and self.coordinator.data["id"] == self._equipment["id"]
         ):
-            self._equipment = self.coordinator.data
+            self._value = self.coordinator.data[STATUS][DESC]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
@@ -535,32 +566,34 @@ class StatusSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self):
-        return self._equipment["status"]["desc"]
+        # return self._equipment[STATUS][DESC]
+        return self._value
 
     @property
     def icon(self):
-        if self._equipment["status"]["desc"] != "Ok":
+        if self._value != "Ok":
             return "mdi:alert-circle"
         return "mdi:check-circle"
 
 
-class TargetSensor(CoordinatorEntity, SensorEntity):
+class CurrentOutputSensor(CoordinatorEntity, SensorEntity):
     """SWG Salt Sensor for njsPC-HA"""
 
     def __init__(self, coordinator, chlorinator):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._chlorinator = chlorinator
-        self._value = chlorinator["currentOutput"]
+        self._value = chlorinator[CURRENT_OUTPUT]
         self._available = True
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         if (
             self.coordinator.data["event"] == EVENT_CHLORINATOR
-            and self.coordinator.data["id"] == self._chlorinator["id"]
+            and self.coordinator.data["id"] == self._chlorinator["id"]            
+            and CURRENT_OUTPUT in self.coordinator.data    # make sure the data we are looking for is in the coordinator data
         ):
-            self._chlorinator = self.coordinator.data
+            self._value = self.coordinator.data[CURRENT_OUTPUT]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
@@ -594,7 +627,8 @@ class TargetSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         """Raw value of the sensor"""
-        return self._chlorinator["currentOutput"]
+        # return self._chlorinator[CURRENT_OUTPUT]
+        return self._value
 
     @property
     def icon(self):
@@ -607,4 +641,66 @@ class TargetSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         """Return entity specific state attributes."""
-        return {"target_output": self._chlorinator["targetOutput"]}
+        return {"target_output": self._chlorinator[TARGET_OUTPUT]}
+
+class TargetOutputSensor(CoordinatorEntity, SensorEntity):
+    """SWG Salt Sensor for njsPC-HA"""
+
+    def __init__(self, coordinator, chlorinator):
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._chlorinator = chlorinator
+        self._value = chlorinator[TARGET_OUTPUT]
+        self._available = True
+
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if (
+            self.coordinator.data["event"] == EVENT_CHLORINATOR
+            and self.coordinator.data["id"] == self._chlorinator["id"]            
+            and TARGET_OUTPUT in self.coordinator.data    # make sure the data we are looking for is in the coordinator data
+        ):
+            self._value = self.coordinator.data[TARGET_OUTPUT]
+            self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self):
+        return False
+
+    @property
+    def available(self):
+        return self._available
+
+    @property
+    def name(self):
+        """Name of the sensor"""
+        return self._chlorinator["name"] + " Target Output"
+
+    @property
+    def unique_id(self):
+        """ID of the sensor"""
+        return self.coordinator.api.get_unique_id(
+            f'salttargetoutput_{self._chlorinator["id"]}'
+        )
+
+    @property
+    def state_class(self):
+        """State class of the sensor"""
+        return STATE_CLASS_MEASUREMENT
+
+    @property
+    def native_value(self):
+        """Raw value of the sensor"""
+        return self._value
+
+    @property
+    def icon(self):
+        return "mdi:target"
+
+    @property
+    def native_unit_of_measurement(self) -> str:
+        return PERCENTAGE
+
