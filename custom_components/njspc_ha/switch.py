@@ -16,6 +16,7 @@ from .const import (
     EVENT_CIRCUIT,
     EVENT_CIRCUITGROUP,
     EVENT_FEATURE,
+    SUPER_CHLOR,
 )
 
 
@@ -39,7 +40,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         new_devices.append(CircuitSwitch(coordinator, feature, EVENT_FEATURE, API_FEATURE_SETSTATE))   
 
     for chlorinator in coordinator.api._config["chlorinators"]:
-        new_devices.append(SuperChlorSwitch(coordinator, chlorinator))
+        if SUPER_CHLOR in chlorinator:
+            new_devices.append(SuperChlorSwitch(coordinator, chlorinator))
 
     if new_devices:
         async_add_entities(new_devices)
@@ -119,6 +121,7 @@ class SuperChlorSwitch(CoordinatorEntity, SwitchEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._chlorinator = chlorinator
+        self._value = self._chlorinator[SUPER_CHLOR]
         self._available = True
 
     def _handle_coordinator_update(self) -> None:
@@ -126,8 +129,9 @@ class SuperChlorSwitch(CoordinatorEntity, SwitchEntity):
         if (
             self.coordinator.data["event"] == EVENT_CHLORINATOR
             and self.coordinator.data["id"] == self._chlorinator["id"]
+            and SUPER_CHLOR in self.coordinator.data
         ):
-            self._chlorinator = self.coordinator.data
+            self._value = self.coordinator.data[SUPER_CHLOR]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
@@ -163,7 +167,9 @@ class SuperChlorSwitch(CoordinatorEntity, SwitchEntity):
 
     @property
     def is_on(self):
-        return self._chlorinator["superChlor"]
+        # return self._chlorinator["superChlor"]
+        return self._value
+
 
     @property
     def icon(self) -> str:

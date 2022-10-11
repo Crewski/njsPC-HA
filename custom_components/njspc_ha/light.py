@@ -24,7 +24,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             if circuit["type"]["isLight"]:
                 _lightthemes = {}
                 for theme in await coordinator.api.get_lightthemes(circuit["id"]):
-                    _lightthemes[theme["val"]] = theme["desc"]
+                    _lightthemes[theme["val"]] = theme[DESC]
                 new_devices.append(
                     CircuitLight(coordinator, circuit, _lightthemes, EVENT_CIRCUIT, API_CIRCUIT_SETSTATE)
                 )
@@ -33,7 +33,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     for group in coordinator.api._config["lightGroups"]:
         _lightthemes = {}
         for theme in await coordinator.api.get_lightthemes(group["id"]):
-            _lightthemes[theme["val"]] = theme["desc"]
+            _lightthemes[theme["val"]] = theme[DESC]
         new_devices.append(
             CircuitLight(coordinator, group, _lightthemes, EVENT_LIGHTGROUP, API_LIGHTGROUP_SETSTATE)
         )
