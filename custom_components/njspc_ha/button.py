@@ -5,6 +5,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     API_LIGHT_RUNCOMMAND,
+    DESC,
     DOMAIN,
 )
 

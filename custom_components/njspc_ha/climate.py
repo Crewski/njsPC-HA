@@ -10,7 +10,7 @@ from homeassistant.const import ATTR_TEMPERATURE, TEMP_FAHRENHEIT, TEMP_CELSIUS
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, EVENT_AVAILABILITY, EVENT_BODY
+from .const import DESC, DOMAIN, EVENT_AVAILABILITY, EVENT_BODY
 
 NJSPC_HVAC_ACTION_TO_HASS = {
     # Map to None if we do not know how to represent.
