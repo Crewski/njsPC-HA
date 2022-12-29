@@ -52,7 +52,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             new_devices.append(PowerSensor(coordinator, pump))
         if FLOW in pump:  # for pumps that have a flow reading
             new_devices.append(FlowSensor(coordinator, pump))
-        new_devices.append(StatusSensor(coordinator, pump, EVENT_PUMP))
+        if STATUS in pump:
+            new_devices.append(StatusSensor(coordinator, pump, EVENT_PUMP))
     for chlorinator in coordinator.api._config["chlorinators"]:
         if SALT_LEVEL in chlorinator:
             new_devices.append(SaltSensor(coordinator, chlorinator))
@@ -64,8 +65,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             new_devices.append(SaltRequiredSensor(coordinator, chlorinator))
         if SALT_TARGET in chlorinator:
             new_devices.append(SaltTargetSensor(coordinator, chlorinator))
-        new_devices.append(StatusSensor(
-            coordinator, chlorinator, EVENT_CHLORINATOR))
+        if STATUS in chlorinator:
+            new_devices.append(StatusSensor(
+                coordinator, chlorinator, EVENT_CHLORINATOR))
     if new_devices:
         async_add_entities(new_devices)
 

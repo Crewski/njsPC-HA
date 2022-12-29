@@ -119,20 +119,23 @@ class Climate(CoordinatorEntity, ClimateEntity):
     @property
     def min_temp(self) -> float:
         """Set min temp specific to body type"""
-        try:
-            if self._body["type"]["val"] == 0:
-                # pool setpoint
-                return 70 if self._units == 0 else 21
-            else:
-                # spa setpoint
-                return 90 if self._units == 0 else 32
-        except:
-            # default to pool
-            return 70 if self._units == 0 else 21
+        
+        return 70 if self._units == 0 else 21
+        # try:
+        #     if self._body["type"]["val"] == 0:
+        #         # pool setpoint
+        #         return 70 if self._units == 0 else 21
+        #     else:
+        #         # spa setpoint
+        #         return 90 if self._units == 0 else 32
+        # except:
+        #     # default to pool
+        #     return 70 if self._units == 0 else 21
 
     @property
     def max_temp(self) -> float:
         """Set max temp specific to body type"""
+        return 104 if self._units == 0 else 40
         try:
             if self._body["type"]["val"] == 0:
                 # pool setpoint
