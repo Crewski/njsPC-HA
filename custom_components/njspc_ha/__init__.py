@@ -8,6 +8,8 @@ import socketio
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform, CONF_HOST, CONF_PORT, EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant, Event
+from homeassistant.helpers.device_registry import DeviceEntry
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers import aiohttp_client
 
@@ -25,6 +27,7 @@ from .const import (
     EVENT_CHLORINATOR,
     EVENT_CIRCUIT,
     EVENT_CIRCUITGROUP,
+    EVENT_CONTROLLER,
     EVENT_FEATURE,
     EVENT_LIGHTGROUP,
     EVENT_PUMP,
@@ -36,7 +39,7 @@ PLATFORMS: list[Platform] = [
     Platform.CLIMATE,
     Platform.NUMBER,
     Platform.LIGHT,
-    Platform.BUTTON
+    Platform.BUTTON,
 ]
 
 
@@ -45,10 +48,9 @@ _LOGGER = logging.getLogger(__name__)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up njsPC-HA from a config entry."""
-    # TODO Store an API object for your platforms to access
 
     api = NjsPCHAapi(hass, entry.data)
-    await api.get_config()
+    await api.get_initial()
 
     coordinator = NjsPCHAdata(hass, api)
     await coordinator.sio_connect()
@@ -76,10 +78,17 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     return unload_ok
 
 
+async def async_remove_config_entry_device(
+    hass: HomeAssistant, config_entry: ConfigEntry, device_entry: DeviceEntry
+) -> bool:
+    """Remove a config entry from a device."""
+    return True
+
+
 class NjsPCHAdata(DataUpdateCoordinator):
     """Data coordinator for receiving from nodejs-PoolController"""
 
-    def __init__(self, hass: HomeAssistant, api: NjsPCHAapi):
+    def __init__(self, hass: HomeAssistant, api: NjsPCHAapi) -> None:
         """Initialize data coordinator."""
         super().__init__(
             hass,
@@ -141,12 +150,17 @@ class NjsPCHAdata(DataUpdateCoordinator):
             data["event"] = EVENT_FEATURE
             self.async_set_updated_data(data)
 
+        @self.sio.on("controller")
+        async def handle_controller(data):
+            data["event"] = EVENT_CONTROLLER
+            self.async_set_updated_data(data)
+
         @self.sio.event
         async def connect():
             print("I'm connected!")
             avail = {"event": EVENT_AVAILABILITY, "available": True}
             self.async_set_updated_data(avail)
-            self.logger.debug(f"SocketIO connect to {self.api._base_url}")
+            self.logger.debug(f"SocketIO connect to {self.api.get_base_url()}")
 
         @self.sio.event
         async def connect_error(data):
@@ -159,12 +173,13 @@ class NjsPCHAdata(DataUpdateCoordinator):
         async def disconnect():
             avail = {"event": EVENT_AVAILABILITY, "available": False}
             self.async_set_updated_data(avail)
-            self.logger.debug(f"SocketIO disconnect to {self.api._base_url}")
+            self.logger.debug(f"SocketIO disconnect to {self.api.get_base_url()}")
             print("I'm disconnected!")
 
-        await self.sio.connect(self.api._base_url)
+        await self.sio.connect(self.api.get_base_url())
 
     async def sio_close(self):
+        """Close the connection to njsPC"""
         await self.sio.disconnect()
 
 
@@ -178,6 +193,14 @@ class NjsPCHAapi:
         self._config = None
         self._session = None
 
+    def get_base_url(self):
+        """Return the base url"""
+        return self._base_url
+
+    def get_config(self):
+        """Return the initial config"""
+        return self._config
+
     async def command(self, url: str, data):
         """Send commands to nodejs-PoolController via PUT request"""
         async with self._session.put(f"{self._base_url}/{url}", json=data) as resp:
@@ -186,7 +209,7 @@ class NjsPCHAapi:
             else:
                 _LOGGER.error(await resp.text())
 
-    async def get_config(self):
+    async def get_initial(self):
         """Let the initial config from nodejs-PoolController"""
         self._session = aiohttp_client.async_get_clientsession(self.hass)
         async with self._session.get(f"{self._base_url}/{API_STATE_ALL}") as resp:
@@ -195,10 +218,10 @@ class NjsPCHAapi:
             else:
                 _LOGGER.error(await resp.text())
 
-    async def get_heatmodes(self, id):
+    async def get_heatmodes(self, identifier):
         """Get the available heat modes for body"""
         async with self._session.get(
-            f"{self._base_url}/{API_CONFIG_BODY}/{id}/{API_HEATMODES}"
+            f"{self._base_url}/{API_CONFIG_BODY}/{identifier}/{API_HEATMODES}"
         ) as resp:
             if resp.status == 200:
                 return await resp.json()
@@ -206,10 +229,10 @@ class NjsPCHAapi:
                 _LOGGER.error(await resp.text())
                 return
 
-    async def get_lightthemes(self, id):
+    async def get_lightthemes(self, identifier):
         """Get list of themes for light"""
         async with self._session.get(
-            f"{self._base_url}/{API_CONFIG_CIRCUIT}/{id}/{API_LIGHTTHEMES}"
+            f"{self._base_url}/{API_CONFIG_CIRCUIT}/{identifier}/{API_LIGHTTHEMES}"
         ) as resp:
             if resp.status == 200:
                 return await resp.json()
@@ -217,10 +240,10 @@ class NjsPCHAapi:
                 _LOGGER.error(await resp.text())
                 return
 
-    async def get_lightcommands(self, id):
+    async def get_lightcommands(self, identifier):
         """Get light commands for lights"""
         async with self._session.get(
-            f"{self._base_url}/{API_CONFIG_CIRCUIT}/{id}/{API_LIGHTCOMMANDS}"
+            f"{self._base_url}/{API_CONFIG_CIRCUIT}/{identifier}/{API_LIGHTCOMMANDS}"
         ) as resp:
             if resp.status == 200:
                 return await resp.json()

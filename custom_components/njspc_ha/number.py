@@ -1,3 +1,4 @@
+from .entity import NjsPCEntity
 from .const import (
     API_CHLORINATOR_POOL_SETPOINT,
     API_CHLORINATOR_SPA_SETPOINT,
@@ -6,10 +7,10 @@ from .const import (
     EVENT_CHLORINATOR,
     POOL_SETPOINT,
     SPA_SETPOINT,
-    API_CONFIG_CHLORINATOR
+    API_CONFIG_CHLORINATOR,
+    SUPER_CHLOR_HOURS,
 )
 from homeassistant.const import PERCENTAGE
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.components.number import NumberEntity
 
 
@@ -17,37 +18,56 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     """Add sensors for passed config_entry in HA."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
 
+    config = coordinator.api.get_config()
     new_devices = []
-    for chlorinator in coordinator.api._config["chlorinators"]:
-        if chlorinator["body"]["val"] == 0 or chlorinator["body"]["val"] == 32:
-            # pool setpoint
+    for chlorinator in config["chlorinators"]:
+        try:
+            if chlorinator["body"]["val"] == 0 or chlorinator["body"]["val"] == 32:
+                # pool setpoint
+                new_devices.append(
+                    SWGNumber(
+                        coordinator,
+                        chlorinator,
+                        POOL_SETPOINT,
+                        API_CHLORINATOR_POOL_SETPOINT,
+                    )
+                )
+        except KeyError:
+            pass
+        try:
+            if chlorinator["body"]["val"] == 1 or chlorinator["body"]["val"] == 32:
+                # spa setpoint
+                new_devices.append(
+                    SWGNumber(
+                        coordinator=coordinator,
+                        chlorinator=chlorinator,
+                        setpoint=SPA_SETPOINT,
+                        command=API_CHLORINATOR_SPA_SETPOINT,
+                    )
+                )
+        except KeyError:
+            pass
+        if SUPER_CHLOR_HOURS in chlorinator:
             new_devices.append(
-                SWGNumber(
-                    coordinator,
-                    chlorinator,
-                    POOL_SETPOINT,
-                    API_CHLORINATOR_POOL_SETPOINT,
+                HoursNumber(
+                    coordinator=coordinator,
+                    chlorinator=chlorinator,
+                    command=API_CONFIG_CHLORINATOR,
                 )
             )
-        if chlorinator["body"]["val"] == 1 or chlorinator["body"]["val"] == 32:
-            # spa setpoint
-            new_devices.append(
-                SWGNumber(
-                    coordinator, chlorinator, SPA_SETPOINT, API_CHLORINATOR_SPA_SETPOINT
-                )
-            )
-        new_devices.append(HoursNumber(coordinator, chlorinator, API_CONFIG_CHLORINATOR))
 
     if new_devices:
         async_add_entities(new_devices)
 
 
-class SWGNumber(CoordinatorEntity, NumberEntity):
+class SWGNumber(NjsPCEntity, NumberEntity):
     """Number for setting SWG Setpoint in njsPC-HA."""
 
     def __init__(self, coordinator, chlorinator, setpoint, command):
         """Initialize the sensor."""
-        super().__init__(coordinator)
+        # super().__init__(coordinator)
+        self.coordinator = coordinator
+        self.coordinator_context = object()
         self._chlorinator = chlorinator
         self._type = setpoint
         self._command = command
@@ -70,7 +90,7 @@ class SWGNumber(CoordinatorEntity, NumberEntity):
         """Update the current value."""
         new_value = int(value)
         data = {"id": self._chlorinator["id"], "setPoint": new_value}
-        await self.coordinator.api.command(self._command, data)
+        await self.coordinator.api.command(url=self._command, data=data)
 
     @property
     def should_poll(self):
@@ -90,7 +110,7 @@ class SWGNumber(CoordinatorEntity, NumberEntity):
     def unique_id(self):
         """ID of the sensor"""
         return self.coordinator.api.get_unique_id(
-            f'swg{self._type.lower()}_{self._chlorinator["id"]}'
+            name=f'swg{self._type.lower()}_{self._chlorinator["id"]}'
         )
 
     @property
@@ -110,15 +130,18 @@ class SWGNumber(CoordinatorEntity, NumberEntity):
     def native_unit_of_measurement(self):
         return PERCENTAGE
 
-class HoursNumber(CoordinatorEntity, NumberEntity):
+
+class HoursNumber(NjsPCEntity, NumberEntity):
     """Number for setting SWG Setpoint in njsPC-HA."""
 
     def __init__(self, coordinator, chlorinator, command):
         """Initialize the sensor."""
-        super().__init__(coordinator)
+        # super().__init__(coordinator)
+        self.coordinator = coordinator
+        self.coordinator_context = object()
         self._chlorinator = chlorinator
         self._command = command
-        self._value = chlorinator["superChlorHours"]
+        self._value = chlorinator[SUPER_CHLOR_HOURS]
         self._available = True
 
     def _handle_coordinator_update(self) -> None:
@@ -137,7 +160,7 @@ class HoursNumber(CoordinatorEntity, NumberEntity):
         """Update the current value."""
         new_value = int(value)
         data = {"id": self._chlorinator["id"], "superChlorHours": new_value}
-        await self.coordinator.api.command(self._command, data)
+        await self.coordinator.api.command(url=self._command, data=data)
 
     @property
     def should_poll(self):
@@ -156,7 +179,7 @@ class HoursNumber(CoordinatorEntity, NumberEntity):
     def unique_id(self):
         """ID of the sensor"""
         return self.coordinator.api.get_unique_id(
-            f'swgsuperchlorhours_{self._chlorinator["id"]}'
+            name=f'swgsuperchlorhours_{self._chlorinator["id"]}'
         )
 
     @property

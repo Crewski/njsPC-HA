@@ -1,9 +1,8 @@
 """Platform for switch integration."""
+from __future__ import annotations
+from .entity import NjsPCEntity
 
-
-from homeassistant.const import DEVICE_CLASS_POWER, DEVICE_CLASS_TEMPERATURE
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     API_CIRCUIT_SETSTATE,
@@ -20,39 +19,71 @@ from .const import (
 )
 
 
-
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Add sensors for passed config_entry in HA."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
 
     new_devices = []
-    for circuit in coordinator.api._config["circuits"]:
+    config = coordinator.api.get_config()
+    for circuit in config["circuits"]:
         try:
             if not circuit["type"]["isLight"]:
-                new_devices.append(CircuitSwitch(coordinator, circuit, EVENT_CIRCUIT, API_CIRCUIT_SETSTATE))
+                new_devices.append(
+                    CircuitSwitch(
+                        coordinator=coordinator,
+                        circuit=circuit,
+                        event=EVENT_CIRCUIT,
+                        command=API_CIRCUIT_SETSTATE,
+                    )
+                )
         except KeyError:
-            new_devices.append(CircuitSwitch(coordinator, circuit, EVENT_CIRCUIT, API_CIRCUIT_SETSTATE))
+            new_devices.append(
+                CircuitSwitch(
+                    coordinator=coordinator,
+                    circuit=circuit,
+                    event=EVENT_CIRCUIT,
+                    command=API_CIRCUIT_SETSTATE,
+                )
+            )
 
-    for circuit in coordinator.api._config["circuitGroups"]:
-        new_devices.append(CircuitSwitch(coordinator, circuit, EVENT_CIRCUITGROUP, API_CIRCUITGROUP_SETSTATE))
+    for circuit in config["circuitGroups"]:
+        new_devices.append(
+            CircuitSwitch(
+                coordinator=coordinator,
+                circuit=circuit,
+                event=EVENT_CIRCUITGROUP,
+                command=API_CIRCUITGROUP_SETSTATE,
+            )
+        )
 
-    for feature in coordinator.api._config["features"]:
-        new_devices.append(CircuitSwitch(coordinator, feature, EVENT_FEATURE, API_FEATURE_SETSTATE))   
+    for feature in config["features"]:
+        new_devices.append(
+            CircuitSwitch(
+                coordinator=coordinator,
+                circuit=feature,
+                event=EVENT_FEATURE,
+                command=API_FEATURE_SETSTATE,
+            )
+        )
 
-    for chlorinator in coordinator.api._config["chlorinators"]:
+    for chlorinator in config["chlorinators"]:
         if SUPER_CHLOR in chlorinator:
-            new_devices.append(SuperChlorSwitch(coordinator, chlorinator))
+            new_devices.append(
+                SuperChlorSwitch(coordinator=coordinator, chlorinator=chlorinator)
+            )
 
     if new_devices:
         async_add_entities(new_devices)
 
 
-class CircuitSwitch(CoordinatorEntity, SwitchEntity):
+class CircuitSwitch(NjsPCEntity, SwitchEntity):
     """Circuit switch for njsPC-HA"""
 
     def __init__(self, coordinator, circuit, event, command):
         """Initialize the sensor."""
-        super().__init__(coordinator)
+        # super().__init__(coordinator)
+        self.coordinator = coordinator
+        self.coordinator_context = object()
         self._circuit = circuit
         self._event = event
         self._command = command
@@ -73,12 +104,12 @@ class CircuitSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs):
         """Turn the entity on."""
         data = {"id": self._circuit["id"], "state": True}
-        await self.coordinator.api.command(self._command, data)
+        await self.coordinator.api.command(url=self._command, data=data)
 
     async def async_turn_off(self, **kwargs):
         """Turn the entity on."""
         data = {"id": self._circuit["id"], "state": False}
-        await self.coordinator.api.command(self._command, data)
+        await self.coordinator.api.command(url=self._command, data=data)
 
     @property
     def should_poll(self):
@@ -95,13 +126,13 @@ class CircuitSwitch(CoordinatorEntity, SwitchEntity):
     @property
     def unique_id(self) -> str:
         """Set unique device_id"""
-        return self.coordinator.api.get_unique_id(f'circuit_{self._circuit["id"]}')
+        return self.coordinator.api.get_unique_id(name=f'circuit_{self._circuit["id"]}')
 
     @property
     def is_on(self):
         try:
             return self._circuit["isOn"]
-        except:
+        except KeyError:
             return False
 
     @property
@@ -114,12 +145,14 @@ class CircuitSwitch(CoordinatorEntity, SwitchEntity):
             return "mdi:toggle-switch-variant"
 
 
-class SuperChlorSwitch(CoordinatorEntity, SwitchEntity):
+class SuperChlorSwitch(NjsPCEntity, SwitchEntity):
     """Super Chlorinate switch for njsPC-HA"""
 
     def __init__(self, coordinator, chlorinator):
         """Initialize the sensor."""
-        super().__init__(coordinator)
+        # super().__init__(coordinator)
+        self.coordinator = coordinator
+        self.coordinator_context = object()
         self._chlorinator = chlorinator
         self._value = self._chlorinator[SUPER_CHLOR]
         self._available = True
@@ -140,12 +173,12 @@ class SuperChlorSwitch(CoordinatorEntity, SwitchEntity):
     async def async_turn_on(self, **kwargs):
         """Turn the entity on."""
         data = {"id": self._chlorinator["id"], "superChlorinate": True}
-        await self.coordinator.api.command(API_SUPERCHLOR, data)
+        await self.coordinator.api.command(url=API_SUPERCHLOR, data=data)
 
     async def async_turn_off(self, **kwargs):
         """Turn the entity on."""
         data = {"id": self._chlorinator["id"], "superChlorinate": False}
-        await self.coordinator.api.command(API_SUPERCHLOR, data)
+        await self.coordinator.api.command(url=API_SUPERCHLOR, data=data)
 
     @property
     def should_poll(self):
@@ -162,14 +195,13 @@ class SuperChlorSwitch(CoordinatorEntity, SwitchEntity):
     @property
     def unique_id(self):
         return self.coordinator.api.get_unique_id(
-            f'superchlorinate_{self._chlorinator["id"]}'
+            name=f'superchlorinate_{self._chlorinator["id"]}'
         )
 
     @property
     def is_on(self):
         # return self._chlorinator["superChlor"]
         return self._value
-
 
     @property
     def icon(self) -> str:
