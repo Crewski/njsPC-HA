@@ -244,10 +244,12 @@ class Climate(NjsPCEntity, ClimateEntity):
         if len(self._heatmodes) <= 2:
             njspc_value = None
             if hvac_mode == HVACMode.OFF:
-                njspc_value = 1
+                njspc_value = next(
+                    (k for k, v in self._heatmodes.items() if v.lower() == "off"), None
+                )
             else:
                 njspc_value = next(
-                    (k for k, v in self._heatmodes.items() if k > 1), None
+                    (k for k, v in self._heatmodes.items() if v.lower() != "off"), None
                 )
             if njspc_value is None:
                 self.coordinator.logger.error(
