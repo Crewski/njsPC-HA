@@ -1,7 +1,7 @@
 """Platform for light integration."""
 
+from .entity import NjsPCEntity
 from homeassistant.components.light import ATTR_EFFECT, LightEntity, LightEntityFeature
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     API_CIRCUIT_SETSTATE,
@@ -19,37 +19,51 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     """Add sensors for passed config_entry in HA."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
 
+    config = coordinator.api.get_config()
     new_devices = []
-    for circuit in coordinator.api._config["circuits"]:
+    for circuit in config["circuits"]:
         try:
             if circuit["type"]["isLight"]:
                 _lightthemes = {}
                 for theme in await coordinator.api.get_lightthemes(circuit["id"]):
                     _lightthemes[theme["val"]] = theme[DESC]
                 new_devices.append(
-                    CircuitLight(coordinator, circuit, _lightthemes, EVENT_CIRCUIT, API_CIRCUIT_SETSTATE)
+                    CircuitLight(
+                        coordinator=coordinator,
+                        circuit=circuit,
+                        lightthemes=_lightthemes,
+                        event=EVENT_CIRCUIT,
+                        command=API_CIRCUIT_SETSTATE,
+                    )
                 )
         except KeyError:
             pass
-    for group in coordinator.api._config["lightGroups"]:
+    for group in config["lightGroups"]:
         _lightthemes = {}
         for theme in await coordinator.api.get_lightthemes(group["id"]):
             _lightthemes[theme["val"]] = theme[DESC]
         new_devices.append(
-            CircuitLight(coordinator, group, _lightthemes, EVENT_LIGHTGROUP, API_LIGHTGROUP_SETSTATE)
+            CircuitLight(
+                coordinator=coordinator,
+                circuit=group,
+                lightthemes=_lightthemes,
+                event=EVENT_LIGHTGROUP,
+                command=API_LIGHTGROUP_SETSTATE,
+            )
         )
 
     if new_devices:
         async_add_entities(new_devices)
 
 
-class CircuitLight(CoordinatorEntity, LightEntity):
+class CircuitLight(NjsPCEntity, LightEntity):
     """Light entity for njsPC-HA."""
-
 
     def __init__(self, coordinator, circuit, lightthemes, event, command):
         """Initialize the sensor."""
-        super().__init__(coordinator)
+        # super().__init__(coordinator)
+        self.coordinator = coordinator
+        self.coordinator_context = object()
         self._circuit = circuit
         self._lightthemes = lightthemes
         self._event = event
@@ -88,16 +102,16 @@ class CircuitLight(CoordinatorEntity, LightEntity):
                     )
                     return
                 data = {"id": self._circuit["id"], "theme": njspc_value}
-                await self.coordinator.api.command(API_CIRCUIT_SETTHEME, data)
+                await self.coordinator.api.command(url=API_CIRCUIT_SETTHEME, data=data)
                 return
 
         data = {"id": self._circuit["id"], "state": True}
-        await self.coordinator.api.command(self._command, data)
+        await self.coordinator.api.command(url=self._command, data=data)
 
     async def async_turn_off(self, **kwargs):
         """Turn the entity on."""
         data = {"id": self._circuit["id"], "state": False}
-        await self.coordinator.api.command(self._command, data)
+        await self.coordinator.api.command(url=self._command, data=data)
 
     @property
     def should_poll(self):
@@ -114,13 +128,13 @@ class CircuitLight(CoordinatorEntity, LightEntity):
     @property
     def unique_id(self) -> str:
         """Set unique device_id"""
-        return self.coordinator.api.get_unique_id(f'circuit_{self._circuit["id"]}')
+        return self.coordinator.api.get_unique_id(name=f'circuit_{self._circuit["id"]}')
 
     @property
     def is_on(self):
         try:
             return self._circuit["isOn"]
-        except:
+        except KeyError:
             return False
 
     @property
@@ -129,7 +143,7 @@ class CircuitLight(CoordinatorEntity, LightEntity):
         try:
             theme_value = self._circuit["lightingTheme"]["val"]
             return self._lightthemes[theme_value]
-        except:
+        except KeyError:
             return None
 
     @property
