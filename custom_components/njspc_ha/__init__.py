@@ -13,6 +13,16 @@ from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.helpers import aiohttp_client
 
+
+PLATFORMS: list[Platform] = [
+    Platform.SENSOR,
+    Platform.SWITCH,
+    Platform.CLIMATE,
+    Platform.NUMBER,
+    Platform.LIGHT,
+    Platform.BUTTON,
+    Platform.BINARY_SENSOR,
+]
 from .const import (
     API_CONFIG_BODY,
     API_CONFIG_CIRCUIT,
@@ -25,22 +35,15 @@ from .const import (
     EVENT_AVAILABILITY,
     EVENT_BODY,
     EVENT_CHLORINATOR,
+    EVENT_CHEM_CONTROLLER,
     EVENT_CIRCUIT,
     EVENT_CIRCUITGROUP,
     EVENT_CONTROLLER,
     EVENT_FEATURE,
     EVENT_LIGHTGROUP,
     EVENT_PUMP,
+    EVENT_FILTER,
 )
-
-PLATFORMS: list[Platform] = [
-    Platform.SENSOR,
-    Platform.SWITCH,
-    Platform.CLIMATE,
-    Platform.NUMBER,
-    Platform.LIGHT,
-    Platform.BUTTON,
-]
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -65,7 +68,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(
         hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STOP, _async_sio_close)
     )
-
     return True
 
 
@@ -98,9 +100,16 @@ class NjsPCHAdata(DataUpdateCoordinator):
         )
         self.api = api
         self.sio = None
+        self.model = api.config["model"]
+        self.version = "Unknown"
+        # Cache this off so the creation of entities is faster
+        self.controller_id = api.get_controller_id()
+        if "appVersionState" in api.config:
+            self.version = f'{api.config["appVersionState"]["installed"]} ({api.config["appVersionState"]["gitLocalBranch"]}-{api.config["appVersionState"]["gitLocalCommit"][-7:]})'
 
     async def sio_connect(self):
         """Method to connect to nodejs-PoolController"""
+
         self.sio = socketio.AsyncClient(
             reconnection=True,
             reconnection_attempts=0,
@@ -109,6 +118,12 @@ class NjsPCHAdata(DataUpdateCoordinator):
             logger=False,
             engineio_logger=False,
         )
+        # Turn off the incessant logging from the socketio/engineio client the
+        # arguments above do nothing as it doesn't check for false when it
+        # instantiates the SocketIO client.  It just inherits engineio's logger
+        # which defaults to chatty kathy.
+        logging.getLogger("socketio.client").setLevel(logging.ERROR)
+        logging.getLogger("engineio.client").setLevel(logging.ERROR)
 
         @self.sio.on("temps")
         async def handle_temps(data):
@@ -128,6 +143,11 @@ class NjsPCHAdata(DataUpdateCoordinator):
         @self.sio.on("chlorinator")
         async def handle_chlorinator(data):
             data["event"] = EVENT_CHLORINATOR
+            self.async_set_updated_data(data)
+
+        @self.sio.on("chemController")
+        async def handle_chem_controller(data):
+            data["event"] = EVENT_CHEM_CONTROLLER
             self.async_set_updated_data(data)
 
         @self.sio.on("body")
@@ -153,6 +173,11 @@ class NjsPCHAdata(DataUpdateCoordinator):
         @self.sio.on("controller")
         async def handle_controller(data):
             data["event"] = EVENT_CONTROLLER
+            self.async_set_updated_data(data)
+
+        @self.sio.on("filter")
+        async def handle_filter(data):
+            data["event"] = EVENT_FILTER
             self.async_set_updated_data(data)
 
         @self.sio.event
@@ -190,8 +215,10 @@ class NjsPCHAapi:
         self.hass = hass
         self.data = data
         self._base_url = f"http://{data[CONF_HOST]}:{data[CONF_PORT]}"
-        self._config = None
+        self.config = None
         self._session = None
+        self.model = "Unknown"
+        self.version = "Unknown"
 
     def get_base_url(self):
         """Return the base url"""
@@ -199,7 +226,7 @@ class NjsPCHAapi:
 
     def get_config(self):
         """Return the initial config"""
-        return self._config
+        return self.config
 
     async def command(self, url: str, data):
         """Send commands to nodejs-PoolController via PUT request"""
@@ -214,7 +241,8 @@ class NjsPCHAapi:
         self._session = aiohttp_client.async_get_clientsession(self.hass)
         async with self._session.get(f"{self._base_url}/{API_STATE_ALL}") as resp:
             if resp.status == 200:
-                self._config = await resp.json()
+                self.config = await resp.json()
+
             else:
                 _LOGGER.error(await resp.text())
 
@@ -282,6 +310,11 @@ class NjsPCHAapi:
             else:
                 _LOGGER.error(await resp.text())
                 return _has_cooling
+
+    def get_controller_id(self) -> str:
+        """Gets the unique id of the njsPC controller"""
+        # Maybe we rethink this and pass a uuid from njsPC. It already exists in the data.
+        return f'{self.data[CONF_HOST].replace(".", "")}{self.data[CONF_PORT]}'
 
     def get_unique_id(self, name) -> str:
         """Create a unique id for entity"""

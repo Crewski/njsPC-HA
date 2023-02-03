@@ -1,5 +1,8 @@
 """Constants for the njsPC-HA integration."""
 
+from homeassistant.backports.enum import StrEnum
+
+
 DOMAIN = "njspc_ha"
 MANUFACTURER = "nodejs-PoolController"
 
@@ -22,7 +25,7 @@ API_CONFIG_CHLORINATOR = "config/chlorinator"
 API_LIGHTCOMMANDS = "lightCommands"
 API_LIGHT_RUNCOMMAND = "state/light/runCommand"
 API_TEMPERATURE_SETPOINT = "state/body/setPoint"
-APT_SET_HEATMODE = "state/body/heatMode"
+API_SET_HEATMODE = "state/body/heatMode"
 
 # SOCKETIO EVENTS
 EVENT_CIRCUIT = "circuit"
@@ -35,6 +38,8 @@ EVENT_CIRCUITGROUP = "circuitGroup"
 EVENT_FEATURE = "feature"
 EVENT_AVAILABILITY = "availability"
 EVENT_CONTROLLER = "controller"
+EVENT_CHEM_CONTROLLER = "chemController"
+EVENT_FILTER = "filter"
 
 POOL_SETPOINT = "poolSetpoint"
 SPA_SETPOINT = "spaSetpoint"
@@ -54,3 +59,89 @@ SUPER_CHLOR = "superChlor"
 SUPER_CHLOR_HOURS = "superChlorHours"
 MIN_FLOW = "minFlow"
 MAX_FLOW = "maxFlow"
+
+
+class PoolEquipmentClass(StrEnum):
+    """Class for pool equipment."""
+
+    CONTROL_PANEL = "control_panel"
+    """Outdoor Control panel for the pool"""
+
+    BODY = "body"
+    """Identifies a body associated with the control system"""
+
+    AUX_CIRCUIT = "circuit"
+    """AUX Circuit that is associated with a relay"""
+
+    FEATURE = "feature"
+    """A feature that defined for the pool"""
+
+    CIRCUIT_GROUP = "circuitGroup"
+    """Group or macro circuits"""
+
+    LIGHT = "light"
+    """A light attached to an Aux Circuit"""
+
+    LIGHT_GROUP = "lightGroup"
+    """Light groupings"""
+
+    PUMP = "pump"
+    """Filter or feature pump"""
+
+    HEATER = "heater"
+    """Defines a heater"""
+
+    VALVE = "valve"
+    """Valve"""
+
+    CHLORINATOR = "chlorinator"
+    """Clorinators that are RS485 controlled"""
+
+    CHEM_CONTROLLER = "chemController"
+    """Chemistry controller such as REM Chem or IntelliChem"""
+
+    FILTER = "filter"
+    """A pool equipment filter"""
+
+
+class PoolEquipmentModel(StrEnum):
+    """Model descriptions for pool equipment."""
+
+    CONTROL_PANEL = "Control Panel"
+    """Outdoor Control panel for the pool"""
+
+    BODY = "Pool Body"
+    """Identifies a body associated with the control system"""
+
+    AUX_CIRCUIT = "Pool Circuit"
+    """AUX Circuit that is associated with a relay"""
+
+    FEATURE = "Pool Feature"
+    """A feature that defined for the pool"""
+
+    CIRCUIT_GROUP = "Pool Circuit Group"
+    """Group or macro circuits"""
+
+    LIGHT = "Pool Light"
+    """A light attached to an Aux Circuit"""
+
+    LIGHT_GROUP = "Pool Light Group"
+    """Light groupings"""
+
+    PUMP = "Pool Pump"
+    """Filter or feature pump"""
+
+    HEATER = "Pool Heater"
+    """Defines a heater"""
+
+    VALVE = "Pool Valve"
+    """Valve"""
+
+    CHLORINATOR = "Pool Chlorinator"
+    """Clorinators that are RS485 controlled"""
+
+    CHEM_CONTROLLER = "Pool Chemistry Controller"
+    """Chemistry controller such as REM Chem or IntelliChem"""
+
+    FILTER = "Pool Filter"
+    """Equipment filter for the pool"""
