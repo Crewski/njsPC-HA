@@ -4,16 +4,20 @@
   "config_flow": true,
   "documentation": "https://github.com/Crewski/njsPC-HA",
   "issue_tracker": "https://github.com/Crewski/njsPC-HA/issues",
-  "requirements": [
-    "python-socketio[asyncio_client]>=4.0.0"
+  "requirements": ["python-socketio[asyncio_client]"],
+  "ssdp": [
+    {
+      "deviceType": "urn:schemas-tagyoureit-org:device:PoolController:1"
+    }
   ],
-  "ssdp": [],
-  "zeroconf": [],
+  "zeroconf": [
+    {
+      "type": "_poolcontroller._tcp.local."
+    }
+  ],
   "homekit": {},
   "dependencies": [],
-  "codeowners": [
-    "@Crewski"
-  ],
+  "codeowners": ["@Crewski"],
   "iot_class": "local_push",
   "version": "0.3.9",
   "homeassistant": "2022.7.0"

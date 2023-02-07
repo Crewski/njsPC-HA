@@ -15,7 +15,25 @@
                     "host": "Host",
                     "port": "Port"
                 }
-            }
+            },
+            "zeroconf_confirm": {
+                "description": "Do you want to add controller at {host}:{port} to Home Assistant?",
+                "title": "Pool Controller Discovered (mDNS)",
+                "data": {
+                  "host": "IP address for the nodeJS Pool Controller",
+                  "port": "Port"
+                }
+              },
+              "ssdp_confirm": {
+                "description": "Do you want to add {name} at {host}:{port} to Home Assistant?",
+                "title": "Pool Controller Discovered (SSDP)",
+                "data": {
+                  "host": "IP address for the nodeJS Pool Controller",
+                  "port": "Port"
+                }
+              }
+
+
         }
     }
 }

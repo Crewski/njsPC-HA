@@ -1,0 +1,20 @@
+set_service_mode:
+  name: Service Mode
+  description: Sets the panel to service mode. This is only applicable for Nixie controllers
+  fields:
+    setting:
+      name: Timeout
+      description: The timout in minutes. 0 for indefinitely
+      required: false
+      example: "0"
+      selector:
+          number:
+            min: 0
+            max: 59940
+            unit_of_measurement: minutes
+
+set_auto_mode:
+  name: Auto Mode
+  description: Sets the panel to auto mode. This is only applicable for Nixie controllers
+
+
