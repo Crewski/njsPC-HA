@@ -5,8 +5,16 @@
   "documentation": "https://github.com/Crewski/njsPC-HA",
   "issue_tracker": "https://github.com/Crewski/njsPC-HA/issues",
   "requirements": ["python-socketio[asyncio_client]"],
-  "ssdp": [],
-  "zeroconf": [],
+  "ssdp": [
+    {
+      "deviceType": "urn:schemas-tagyoureit-org:device:PoolController:1"
+    }
+  ],
+  "zeroconf": [
+    {
+      "type": "_poolcontroller._tcp.local."
+    }
+  ],
   "homekit": {},
   "dependencies": [],
   "codeowners": ["@Crewski"],

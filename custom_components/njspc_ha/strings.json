@@ -7,6 +7,22 @@
           "host": "[%key:common::config_flow::data::host%]",
           "port": "[%key:common::config_flow::data::port%]"
         }
+      },
+      "zeroconf_confirm": {
+        "description": "Do you want to add controller at {host}:{port} to Home Assistant?",
+        "title": "Pool Controller Discovered",
+        "data": {
+          "host": "IP address for the nodeJS Pool Controller",
+          "port": "Port"
+        }
+      },
+      "ssdp_confirm": {
+        "description": "Do you want to add {name} at {host}:{port} to Home Assistant?",
+        "title": "Pool Controller Discovered",
+        "data": {
+          "host": "IP address for the nodeJS Pool Controller",
+          "port": "Port"
+        }
       }
     },
     "error": {

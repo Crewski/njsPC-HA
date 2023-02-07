@@ -832,7 +832,7 @@ class ChlorinatorSetpoint(PoolEquipmentEntity, NumberEntity):
         self._available = True
         self._value = chlorinator[setpoint]
         self._attr_has_entity_name = True
-        self._attr_device_class = f"{self.equipment_name}_{setpoint}setpoint"
+        self._attr_device_class = f"{self.equipment_class}_{setpoint}setpoint"
 
 
     def _handle_coordinator_update(self) -> None:
@@ -876,7 +876,7 @@ class ChlorinatorSetpoint(PoolEquipmentEntity, NumberEntity):
     def name(self) -> str:
         """Name of the sensor"""
         name = "Pool" if self._type == POOL_SETPOINT else "Spa"
-        return f"{self.equipment_name} {name} Setpoint"
+        return f"{name} Setpoint"
 
     @property
     def unique_id(self) -> str:
