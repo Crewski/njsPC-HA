@@ -354,7 +354,7 @@ class BodyCircuitSwitch(PoolEquipmentEntity, SwitchEntity):
         self.equipment_id = body["id"]
         self.equipment_model = PoolEquipmentModel.BODY
         self.body_type = body["type"]["name"]
-        self._event = None
+        self._event = "circuit"
         self._command = None
         self._available = True
         self._value = False
