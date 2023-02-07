@@ -17,6 +17,7 @@ from .const import (
     API_CIRCUITGROUP_SETSTATE,
     API_FEATURE_SETSTATE,
     API_LIGHT_RUNCOMMAND,
+    API_LIGHTGROUP_SETSTATE,
     EVENT_AVAILABILITY,
     EVENT_CIRCUIT,
     EVENT_CIRCUITGROUP,
@@ -41,6 +42,7 @@ class CircuitSwitch(PoolEquipmentEntity, SwitchEntity):
         self.equipment_model = PoolEquipmentModel.AUX_CIRCUIT
         self._event = None
         self._command = None
+        self._value = None
         match equipment_class:
             case PoolEquipmentClass.AUX_CIRCUIT:
                 self._event = EVENT_CIRCUIT
@@ -54,6 +56,11 @@ class CircuitSwitch(PoolEquipmentEntity, SwitchEntity):
                 self._event = EVENT_FEATURE
                 self._command = API_FEATURE_SETSTATE
                 self.equipment_model = PoolEquipmentModel.FEATURE
+            case PoolEquipmentClass.LIGHT_GROUP:
+                self._event = EVENT_LIGHTGROUP
+                self._command = API_LIGHTGROUP_SETSTATE
+                self.equipment_model = PoolEquipmentModel.LIGHT_GROUP
+
         self._available = True
         self._value = False
         if "isOn" in circuit:

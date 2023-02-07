@@ -86,7 +86,9 @@ class CircuitLight(PoolEquipmentEntity, LightEntity):
         self._lightthemes = lightthemes
         self._event = None
         self._command = None
-        self._value = circuit["isOn"]
+        self._value = None
+        if "isOn" in circuit:
+            self._value = circuit["isOn"]
         self._lighting_theme = None
         match equipment_class:
             case PoolEquipmentClass.LIGHT:
@@ -106,7 +108,8 @@ class CircuitLight(PoolEquipmentEntity, LightEntity):
             self.coordinator.data["event"] == self._event
             and self.coordinator.data["id"] == self.equipment_id
         ):
-            self._value = self.coordinator.data["isOn"]
+            if "isOn" in self.coordinator.data:
+                self._value = self.coordinator.data["isOn"]
             if "lightingTheme" in self.coordinator.data:
                 self._lighting_theme = self.coordinator.data["lightingTheme"]["val"]
 

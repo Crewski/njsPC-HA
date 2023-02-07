@@ -469,7 +469,9 @@ class SaltSensor(PoolEquipmentEntity, SensorEntity):
         self.coordinator = coordinator
         self.coordinator_context = object()
         self._chlorinator = chlorinator
-        self._value = chlorinator[SALT_LEVEL]
+        self._value = None
+        if SALT_LEVEL in chlorinator:
+            self._value = chlorinator[SALT_LEVEL]
         self._available = True
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_saltlevel"
@@ -548,7 +550,9 @@ class SaltTargetSensor(PoolEquipmentEntity, SensorEntity):
         self.equipment_model = PoolEquipmentModel.CHLORINATOR
         self.coordinator_context = object()
         self._chlorinator = chlorinator
-        self._value = chlorinator[SALT_TARGET]
+        self._value = None
+        if SALT_TARGET in chlorinator:
+            self._value = chlorinator[SALT_TARGET]
         self._available = True
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_salttarget"
@@ -618,7 +622,9 @@ class SaltRequiredSensor(PoolEquipmentEntity, SensorEntity):
         self.equipment_model = PoolEquipmentModel.CHLORINATOR
         self.coordinator_context = object()
         self._chlorinator = chlorinator
-        self._value = chlorinator[SALT_REQUIRED]
+        self._value = None
+        if SALT_REQUIRED in chlorinator:
+            self._value = chlorinator[SALT_REQUIRED]
         self._available = True
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_saltrequired"
@@ -685,7 +691,9 @@ class CurrentOutputSensor(PoolEquipmentEntity, SensorEntity):
         self.equipment_name = chlorinator["name"]
         self.coordinator_context = object()
         self._chlorinator = chlorinator
-        self._value = chlorinator[CURRENT_OUTPUT]
+        self._value = None
+        if CURRENT_OUTPUT in chlorinator:
+            self._value = chlorinator[CURRENT_OUTPUT]
         self._available = True
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_currentoutput"
@@ -761,7 +769,9 @@ class TargetOutputSensor(PoolEquipmentEntity, SensorEntity):
 
         self.coordinator_context = object()
         self._chlorinator = chlorinator
-        self._value = chlorinator[TARGET_OUTPUT]
+        self._value = None
+        if TARGET_OUTPUT in chlorinator:
+            self._value = chlorinator[TARGET_OUTPUT]
         self._available = True
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_targetoutput"
@@ -830,9 +840,11 @@ class ChlorinatorSetpoint(PoolEquipmentEntity, NumberEntity):
         self.coordinator_context = object()
         self._type = setpoint
         self._available = True
-        self._value = chlorinator[setpoint]
+        self._value = None
+        if setpoint in chlorinator:
+            self._value = chlorinator[setpoint]
         self._attr_has_entity_name = True
-        self._attr_device_class = f"{self.equipment_class}_{setpoint}setpoint"
+        self._attr_device_class = f"{self.equipment_class}_{setpoint}"
 
 
     def _handle_coordinator_update(self) -> None:
@@ -912,7 +924,9 @@ class SuperChlorHours(PoolEquipmentEntity, NumberEntity):
         self.equipment_name = chlorinator["name"]
         self.equipment_model = PoolEquipmentModel.CHLORINATOR
         self.coordinator_context = object()
-        self._value = chlorinator[SUPER_CHLOR_HOURS]
+        self._value = None
+        if SUPER_CHLOR_HOURS in chlorinator:
+            self._value = chlorinator[SUPER_CHLOR_HOURS]
         self._available = True
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_superchlor_hours"
@@ -999,7 +1013,9 @@ class SuperChlorSwitch(PoolEquipmentEntity, SwitchEntity):
         self.equipment_name = chlorinator["name"]
         self.equipment_model = PoolEquipmentModel.CHLORINATOR
         self.coordinator_context = object()
-        self._value = chlorinator[SUPER_CHLOR]
+        self._value = None
+        if SUPER_CHLOR in chlorinator:
+            self._value = chlorinator[SUPER_CHLOR]
         self._available = True
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_superchlorinate"

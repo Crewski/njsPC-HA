@@ -57,7 +57,9 @@ class FilterOnSensor(PoolEquipmentEntity, BinarySensorEntity):
         self.equipment_name = pool_filter["name"]
         self.equipment_id = pool_filter["id"]
         self.equipment_model = PoolEquipmentModel.FILTER
-        self._value = pool_filter["isOn"]
+        self._value = False
+        if "isOn" in pool_filter:
+            self._value = pool_filter["isOn"]
         self._available = True
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_ison"
@@ -68,7 +70,8 @@ class FilterOnSensor(PoolEquipmentEntity, BinarySensorEntity):
             self.coordinator.data["event"] == EVENT_FILTER
             and self.coordinator.data["id"] == self.equipment_id
         ):
-            self._value = self.coordinator.data["isOn"]
+            if "isOn" in self.coordinator.data:
+                self._value = self.coordinator.data["isOn"]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
@@ -120,7 +123,9 @@ class FilterCleanSensor(PoolEquipmentEntity, SensorEntity):
         self.equipment_name = pool_filter["name"]
         self.equipment_model = PoolEquipmentModel.FILTER
         self.coordinator_context = object()
-        self._value = pool_filter["cleanPercentage"]
+        self._value = None
+        if "cleanPercentage" in pool_filter:
+            self._value = pool_filter["cleanPercentage"]
         self._available = True
         # Give us a good entity id
         self._attr_has_entity_name = True
@@ -134,7 +139,8 @@ class FilterCleanSensor(PoolEquipmentEntity, SensorEntity):
             and "id" in self.coordinator.data
             and self.coordinator.data["id"] == self.equipment_id
         ):
-            self._value = self.coordinator.data["cleanPercentage"]
+            if "cleanPercentage" in self.coordinator.data:
+                self._value = self.coordinator.data["cleanPercentage"]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
@@ -184,8 +190,12 @@ class FilterPressureSensor(PoolEquipmentEntity, SensorEntity):
         self.equipment_name = pool_filter["name"]
         self.equipment_model = PoolEquipmentModel.FILTER
         self.coordinator_context = object()
-        self._value = pool_filter["pressure"]
-        self._units = pool_filter["pressureUnits"]["name"]
+        self._value = 0
+        self._units = "psi"
+        if "pressure" in pool_filter:
+            self._value = pool_filter["pressure"]
+        if "pressureUnits" in pool_filter and "name" in pool_filter["pressureUnits"]:
+            self._units = pool_filter["pressureUnits"]["name"]
         self._available = True
         # Give us a good entity id
         self._attr_has_entity_name = True
@@ -199,8 +209,10 @@ class FilterPressureSensor(PoolEquipmentEntity, SensorEntity):
             and "id" in self.coordinator.data
             and self.coordinator.data["id"] == self.equipment_id
         ):
-            self._value = self.coordinator.data["pressure"]
-            self._units = self.coordinator.data["pressureUnits"]["name"]
+            if "pressure" in self.coordinator.data:
+                self._value = self.coordinator.data["pressure"]
+            if "pressureUnits" in self.coordinator.data and "name" in self.coordinator.data["pressureUnits"]:
+                self._units = self.coordinator.data["pressureUnits"]["name"]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
@@ -414,7 +426,7 @@ class BodyHeater(PoolEquipmentEntity, ClimateEntity):
 
     # When thinking about heaters for pool/spa you need to not think of it so much
     # like a home thermostat.  While a home thermostat can be made to work
-    # the difference become a struggle to overcome.
+    # the difference becomes a struggle to overcome.
     # Home Thermostats typical assume only two heat/cool sources that are tied
     # directly to the mode.  For instance, if it is heating the furnace is on and
     # if it is cooling the air conditioner is on.  Finally, (and of no use to us),
@@ -442,11 +454,15 @@ class BodyHeater(PoolEquipmentEntity, ClimateEntity):
         self._units = units
         self._available = True
         self._has_cooling = has_cooling
-        self.heat_setpoint = body["setPoint"]
-        self.cool_setpoint = body["coolSetpoint"]
+        self.heat_setpoint = None
+        self.cool_setpoint = None
         self.heat_mode = None
         self.heat_status = None
         self.body_temperature = None
+        if "setPoint" in body:
+            self.heat_setpoint = body["setPoint"]
+        if "coolSetpoint" in body:
+            self.cool_setpoint = body["coolSetpoint"]
         if "temp" in body:
             self.body_temperature = body["temp"]
         if "heatMode" in body:

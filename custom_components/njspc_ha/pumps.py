@@ -42,7 +42,9 @@ class PumpSpeedSensor(PoolEquipmentEntity, SensorEntity):
         self.equipment_name = pump["name"]
         self.equipment_model = PoolEquipmentModel.PUMP
         self.coordinator_context = object()
-        self._value = pump[RPM]
+        self._value = None
+        if RPM in pump:
+            self._value = pump[RPM]
         self._available = True
         self._state_attributes: dict[str, Any] = dict([])
         if "minSpeed" in pump:
@@ -125,7 +127,9 @@ class PumpPowerSensor(PoolEquipmentEntity, SensorEntity):
         self.equipment_name = pump["name"]
         self.equipment_model = PoolEquipmentModel.PUMP
         self.coordinator_context = object()
-        self._value = pump[WATTS]
+        self._value = None
+        if WATTS in pump:
+            self._value = pump[WATTS]
         self._available = True
         # Below makes sure we have a name that makes sense for the entity.
         self._attr_has_entity_name = True
@@ -195,7 +199,9 @@ class PumpFlowSensor(PoolEquipmentEntity, SensorEntity):
         self.equipment_name = pump["name"]
         self.equipment_model = PoolEquipmentModel.PUMP
         self.coordinator_context = object()
-        self._value = pump[FLOW]
+        self._value = None
+        if FLOW in pump:
+            self._value = pump[FLOW]
         self._available = True
         self._state_attributes: dict[str, Any] = dict([])
         if MIN_FLOW in pump:
@@ -274,6 +280,7 @@ class PumpOnSensor(PoolEquipmentEntity, BinarySensorEntity):
         self.equipment_name = pump["name"]
         self.equipment_id = pump["id"]
         self.equipment_model = PoolEquipmentModel.PUMP
+        self._value = None
         if "relay" in pump:
             self._value = pump["relay"] > 0
         elif "command" in pump:
