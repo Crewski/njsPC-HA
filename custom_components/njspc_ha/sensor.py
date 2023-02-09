@@ -132,74 +132,80 @@ async def async_setup_entry(
                 )
             )
     for chem_controller in config["chemControllers"]:
-        if "ph" in chem_controller:
-            chemical = chem_controller["ph"]
-            if chemical["enabled"] is True:
-                new_devices.append(
-                    ChemistryDosingStatus(
-                        coordinator=coordinator,
-                        chem_controller=chem_controller,
-                        chemical=chemical,
-                    )
-                )
-                new_devices.append(
-                    ChemistrySensor(
-                        coordinator=coordinator,
-                        chem_controller=chem_controller,
-                        chemical=chemical,
-                    )
-                )
-                new_devices.append(
-                    ChemistryDemandSensor(
-                        coordinator=coordinator,
-                        chem_controller=chem_controller,
-                        chemical=chemical,
-                    )
-                )
-                if "tank" in chemical:
+        if (
+            "name" in chem_controller
+            and "type" in chem_controller
+            and "name" in chem_controller["type"]
+            and chem_controller["type"]["name"] != "none"
+        ):
+            if "ph" in chem_controller:
+                chemical = chem_controller["ph"]
+                if chemical["enabled"] is True:
                     new_devices.append(
-                        ChemistryTankLevel(
+                        ChemistryDosingStatus(
                             coordinator=coordinator,
                             chem_controller=chem_controller,
                             chemical=chemical,
                         )
                     )
+                    new_devices.append(
+                        ChemistrySensor(
+                            coordinator=coordinator,
+                            chem_controller=chem_controller,
+                            chemical=chemical,
+                        )
+                    )
+                    new_devices.append(
+                        ChemistryDemandSensor(
+                            coordinator=coordinator,
+                            chem_controller=chem_controller,
+                            chemical=chemical,
+                        )
+                    )
+                    if "tank" in chemical:
+                        new_devices.append(
+                            ChemistryTankLevel(
+                                coordinator=coordinator,
+                                chem_controller=chem_controller,
+                                chemical=chemical,
+                            )
+                        )
 
-        if "orp" in chem_controller:
-            chemical = chem_controller["orp"]
-            if chemical["enabled"] is True:
-                new_devices.append(
-                    ChemistryDosingStatus(
-                        coordinator=coordinator,
-                        chem_controller=chem_controller,
-                        chemical=chemical,
-                    )
-                )
-                new_devices.append(
-                    ChemistrySensor(
-                        coordinator=coordinator,
-                        chem_controller=chem_controller,
-                        chemical=chem_controller["orp"],
-                    )
-                )
-                new_devices.append(
-                    ChemistryDemandSensor(
-                        coordinator=coordinator,
-                        chem_controller=chem_controller,
-                        chemical=chemical,
-                    )
-                )
-                if (
-                    "tank" in chemical
-                    and chemical["doserType"]["name"] != "chlorinator"
-                ):
+            if "orp" in chem_controller:
+                chemical = chem_controller["orp"]
+                if chemical["enabled"] is True:
                     new_devices.append(
-                        ChemistryTankLevel(
+                        ChemistryDosingStatus(
                             coordinator=coordinator,
                             chem_controller=chem_controller,
                             chemical=chemical,
                         )
                     )
+                    new_devices.append(
+                        ChemistrySensor(
+                            coordinator=coordinator,
+                            chem_controller=chem_controller,
+                            chemical=chem_controller["orp"],
+                        )
+                    )
+                    new_devices.append(
+                        ChemistryDemandSensor(
+                            coordinator=coordinator,
+                            chem_controller=chem_controller,
+                            chemical=chemical,
+                        )
+                    )
+                    if (
+                        "tank" in chemical
+                        and chemical["doserType"]["name"] != "chlorinator"
+                    ):
+                        new_devices.append(
+                            ChemistryTankLevel(
+                                coordinator=coordinator,
+                                chem_controller=chem_controller,
+                                chemical=chemical,
+                            )
+                        )
     for pool_filter in config["filters"]:
         new_devices.append(
             FilterPressureSensor(coordinator=coordinator, pool_filter=pool_filter)
