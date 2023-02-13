@@ -37,7 +37,7 @@ async def async_setup_entry(
             # of the ability to assign different functions in the i10D models
             if circuit["id"] == 1 or circuit["id"] == 6:
                 for body in config["temps"]["bodies"]:
-                    if body["circuit"] == circuit["id"]:
+                    if body["circuit"] == circuit["id"] and "name" in circuit:
                         new_devices.append(
                             BodyCircuitSwitch(
                                 coordinator=coordinator, circuit=circuit, body=body

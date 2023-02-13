@@ -75,9 +75,10 @@ async def async_setup_entry(
             "bodies" in config["temps"]
         ):  # We can have Nobody Nixie systems (equipment only)
             for body in list(config["temps"]["bodies"]):
-                new_devices.append(
-                    BodyTempSensor(coordinator=coordinator, units=units, body=body)
-                )
+                if "temp" in body:
+                    new_devices.append(
+                        BodyTempSensor(coordinator=coordinator, units=units, body=body)
+                    )
 
     for pump in config["pumps"]:
         # Pump sensors vary by type. This may need a re-visit for pump types that use a
