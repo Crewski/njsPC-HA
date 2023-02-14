@@ -9,6 +9,7 @@ from homeassistant.core import HomeAssistant
 from .controller import FreezeProtectionSensor
 from .pumps import PumpOnSensor
 from .bodies import FilterOnSensor
+from .features import VirtualCircuit
 
 from .const import (
     DOMAIN,
@@ -35,6 +36,14 @@ async def async_setup_entry(
         new_devices.append(
             FilterOnSensor(coordinator=coordinator, pool_filter=pool_filter)
         )
+    if "virtualCircuits" in config:
+        for virtual_circuit in config["virtualCircuits"]:
+            if "id" in virtual_circuit and "name" in virtual_circuit:
+                new_devices.append(
+                    VirtualCircuit(
+                        coordinator=coordinator, virtual_circuit=virtual_circuit
+                    )
+                )
 
     if new_devices:
         async_add_entities(new_devices)

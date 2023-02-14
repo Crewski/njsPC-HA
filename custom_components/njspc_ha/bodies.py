@@ -25,7 +25,6 @@ from .entity import PoolEquipmentEntity
 from .__init__ import NjsPCHAdata
 from .const import (
     PoolEquipmentClass,
-    PoolEquipmentModel,
     EVENT_TEMPS,
     EVENT_AVAILABILITY,
     EVENT_BODY,
@@ -52,17 +51,11 @@ class FilterOnSensor(PoolEquipmentEntity, BinarySensorEntity):
 
     def __init__(self, coordinator: NjsPCHAdata, pool_filter: Any) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.equipment_class = PoolEquipmentClass.FILTER
-        self.equipment_name = pool_filter["name"]
-        self.equipment_id = pool_filter["id"]
-        self.equipment_model = PoolEquipmentModel.FILTER
+        super().__init__(coordinator=coordinator, equipment_class=PoolEquipmentClass.FILTER, data=pool_filter)
         self._value = False
         if "isOn" in pool_filter:
             self._value = pool_filter["isOn"]
         self._available = True
-        self._attr_has_entity_name = True
-        self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_ison"
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -116,20 +109,11 @@ class FilterCleanSensor(PoolEquipmentEntity, SensorEntity):
 
     def __init__(self, coordinator: NjsPCHAdata, pool_filter: Any) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.coordinator = coordinator
-        self.equipment_class = PoolEquipmentClass.FILTER
-        self.equipment_id = pool_filter["id"]
-        self.equipment_name = pool_filter["name"]
-        self.equipment_model = PoolEquipmentModel.FILTER
-        self.coordinator_context = object()
+        super().__init__(coordinator=coordinator, equipment_class=PoolEquipmentClass.FILTER, data=pool_filter)
         self._value = None
         if "cleanPercentage" in pool_filter:
             self._value = pool_filter["cleanPercentage"]
         self._available = True
-        # Give us a good entity id
-        self._attr_has_entity_name = True
-        self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_cleanpercent"
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -183,13 +167,7 @@ class FilterPressureSensor(PoolEquipmentEntity, SensorEntity):
 
     def __init__(self, coordinator: NjsPCHAdata, pool_filter: Any) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.coordinator = coordinator
-        self.equipment_class = PoolEquipmentClass.FILTER
-        self.equipment_id = pool_filter["id"]
-        self.equipment_name = pool_filter["name"]
-        self.equipment_model = PoolEquipmentModel.FILTER
-        self.coordinator_context = object()
+        super().__init__(coordinator=coordinator, equipment_class=PoolEquipmentClass.FILTER, data=pool_filter)
         self._value = 0
         self._units = "psi"
         if "pressure" in pool_filter:
@@ -197,9 +175,6 @@ class FilterPressureSensor(PoolEquipmentEntity, SensorEntity):
         if "pressureUnits" in pool_filter and "name" in pool_filter["pressureUnits"]:
             self._units = pool_filter["pressureUnits"]["name"]
         self._available = True
-        # Give us a good entity id
-        self._attr_has_entity_name = True
-        self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_pressure"
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -267,19 +242,12 @@ class BodyTempSensor(PoolEquipmentEntity, SensorEntity):
 
     def __init__(self, coordinator: NjsPCHAdata, units: str, body: Any) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.coordinator = coordinator
-        self.equipment_class = PoolEquipmentClass.BODY
-        self.equipment_id = body["id"]
-        self.equipment_name = body["name"]
-        self.equipment_model = PoolEquipmentModel.BODY
-        self.coordinator_context = object()
+        super().__init__(coordinator=coordinator, equipment_class=PoolEquipmentClass.BODY, data=body)
         self._units = units
-        self._value = body["temp"]
+        self._value = None
+        if "temp" in body:
+            self._value = round(body["temp"], 2)
         self._available = True
-        # Give us a good entity id
-        self._attr_has_entity_name = True
-        self._attr_device_class = f"{self.equipment_name}_temperature"
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -335,7 +303,6 @@ class BodyTempSensor(PoolEquipmentEntity, SensorEntity):
             return UnitOfTemperature.FAHRENHEIT
         return UnitOfTemperature.CELSIUS
 
-
 class BodyCircuitSwitch(PoolEquipmentEntity, SwitchEntity):
     """Body Circuit switch for njsPC-HA"""
 
@@ -348,12 +315,10 @@ class BodyCircuitSwitch(PoolEquipmentEntity, SwitchEntity):
         """Initialize the sensor."""
         # Need to add delays to this at some point.  We will get
         # delay messages when this happens
-        super().__init__(coordinator)
-        self.equipment_class = PoolEquipmentClass.BODY
-        self.equipment_name = body["name"]
-        self.equipment_id = body["id"]
-        self.equipment_model = PoolEquipmentModel.BODY
-        self.body_type = body["type"]["name"]
+        super().__init__(coordinator=coordinator,equipment_class=PoolEquipmentClass.BODY, data=body)
+        self.body_type = "pool"
+        if "type" in body:
+            self.body_type = body["type"]["name"]
         self._event = "circuit"
         self._command = None
         self._available = True
@@ -420,7 +385,6 @@ class BodyCircuitSwitch(PoolEquipmentEntity, SwitchEntity):
         else:
             return "mdi:toggle-switch-variant"
 
-
 class BodyHeater(PoolEquipmentEntity, ClimateEntity):
     """Climate entity for njsPC-HA"""
 
@@ -445,11 +409,7 @@ class BodyHeater(PoolEquipmentEntity, ClimateEntity):
     # This is not the heater device and we may add it later to show diagnostic data.
     def __init__(self, coordinator, body, heatmodes, units, has_cooling) -> None:
         """Initialize the body heater."""
-        super().__init__(coordinator)
-        self.equipment_class = PoolEquipmentClass.BODY
-        self.equipment_id = body["id"]
-        self.equipment_name = body["name"]
-        self.equipment_model = PoolEquipmentModel.BODY
+        super().__init__(coordinator=coordinator, equipment_class=PoolEquipmentClass.BODY, data=body)
         self._heatmodes = heatmodes
         self._units = units
         self._available = True
@@ -469,8 +429,6 @@ class BodyHeater(PoolEquipmentEntity, ClimateEntity):
             self.heat_mode = body["heatMode"]
         if "heatStatus" in body:
             self.heat_status = body["heatStatus"]
-        self._attr_has_entity_name = True
-        self._attr_device_class = f"{self.equipment_name}_{body['name']}_heater"
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""

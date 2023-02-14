@@ -27,7 +27,6 @@ from .const import (
     MIN_FLOW,
     MAX_FLOW,
     PoolEquipmentClass,
-    PoolEquipmentModel,
 )
 
 
@@ -36,12 +35,11 @@ class PumpSpeedSensor(PoolEquipmentEntity, SensorEntity):
 
     def __init__(self, coordinator: NjsPCHAdata, pump: Any) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.equipment_id = pump["id"]
-        self.equipment_class = PoolEquipmentClass.PUMP
-        self.equipment_name = pump["name"]
-        self.equipment_model = PoolEquipmentModel.PUMP
-        self.coordinator_context = object()
+        super().__init__(
+            coordinator=coordinator,
+            equipment_class=PoolEquipmentClass.PUMP,
+            data=pump,
+        )
         self._value = None
         if RPM in pump:
             self._value = pump[RPM]
@@ -51,8 +49,6 @@ class PumpSpeedSensor(PoolEquipmentEntity, SensorEntity):
             self._state_attributes["min_speed"] = pump["minSpeed"]
         if "maxSpeed" in pump:
             self._state_attributes["max_speed"] = (pump["maxSpeed"],)
-            # Below makes sure we have a name that makes sense for the entity.
-        self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_speed"
 
     def _handle_coordinator_update(self) -> None:
@@ -121,12 +117,11 @@ class PumpPowerSensor(PoolEquipmentEntity, SensorEntity):
 
     def __init__(self, coordinator, pump):
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.equipment_id = pump["id"]
-        self.equipment_class = PoolEquipmentClass.PUMP
-        self.equipment_name = pump["name"]
-        self.equipment_model = PoolEquipmentModel.PUMP
-        self.coordinator_context = object()
+        super().__init__(
+            coordinator=coordinator,
+            equipment_class=PoolEquipmentClass.PUMP,
+            data=pump,
+        )
         self._value = None
         if WATTS in pump:
             self._value = pump[WATTS]
@@ -193,12 +188,11 @@ class PumpFlowSensor(PoolEquipmentEntity, SensorEntity):
 
     def __init__(self, coordinator: NjsPCHAdata, pump: Any) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.equipment_class = PoolEquipmentClass.PUMP
-        self.equipment_id = pump["id"]
-        self.equipment_name = pump["name"]
-        self.equipment_model = PoolEquipmentModel.PUMP
-        self.coordinator_context = object()
+        super().__init__(
+            coordinator=coordinator,
+            equipment_class=PoolEquipmentClass.PUMP,
+            data=pump,
+        )
         self._value = None
         if FLOW in pump:
             self._value = pump[FLOW]
@@ -275,11 +269,11 @@ class PumpOnSensor(PoolEquipmentEntity, BinarySensorEntity):
 
     def __init__(self, coordinator: NjsPCHAdata, pump: Any) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.equipment_class = PoolEquipmentClass.PUMP
-        self.equipment_name = pump["name"]
-        self.equipment_id = pump["id"]
-        self.equipment_model = PoolEquipmentModel.PUMP
+        super().__init__(
+            coordinator=coordinator,
+            equipment_class=PoolEquipmentClass.PUMP,
+            data=pump,
+        )
         self._value = None
         if "relay" in pump:
             self._value = pump["relay"] > 0
