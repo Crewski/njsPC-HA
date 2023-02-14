@@ -26,6 +26,7 @@ API_LIGHTCOMMANDS = "lightCommands"
 API_LIGHT_RUNCOMMAND = "state/light/runCommand"
 API_TEMPERATURE_SETPOINT = "state/body/setPoint"
 API_SET_HEATMODE = "state/body/heatMode"
+API_CHEM_CONTROLLER_SETPOINT = "state/chemController"
 
 # SOCKETIO EVENTS
 EVENT_CIRCUIT = "circuit"
@@ -40,6 +41,7 @@ EVENT_AVAILABILITY = "availability"
 EVENT_CONTROLLER = "controller"
 EVENT_CHEM_CONTROLLER = "chemController"
 EVENT_FILTER = "filter"
+EVENT_VIRTUAL_CIRCUIT = "virtualCircuit"
 
 POOL_SETPOINT = "poolSetpoint"
 SPA_SETPOINT = "spaSetpoint"
@@ -72,6 +74,9 @@ class PoolEquipmentClass(StrEnum):
 
     AUX_CIRCUIT = "circuit"
     """AUX Circuit that is associated with a relay"""
+
+    VIRTUAL_CIRCUIT = "virtualCircuit"
+    """A circuit that is internally controlled by the OCP"""
 
     FEATURE = "feature"
     """A feature that defined for the pool"""

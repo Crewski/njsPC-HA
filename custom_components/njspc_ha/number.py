@@ -5,7 +5,12 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, POOL_SETPOINT, SPA_SETPOINT, SUPER_CHLOR_HOURS
-from .chemistry import ChlorinatorSetpoint, SuperChlorHours
+from .chemistry import (
+    ChlorinatorSetpoint,
+    SuperChlorHours,
+    ChemControllerSetpoint,
+    ChemControllerIndex,
+)
 
 
 async def async_setup_entry(
@@ -43,6 +48,54 @@ async def async_setup_entry(
             new_devices.append(
                 SuperChlorHours(coordinator=coordinator, chlorinator=chlorinator)
             )
+    for chem_controller in config["chemControllers"]:
+        try:
+            if "ph" in chem_controller and chem_controller["ph"]["enabled"] is True:
+                new_devices.append(
+                    ChemControllerSetpoint(
+                        coordinator=coordinator,
+                        chem_controller=chem_controller,
+                        chem_type="ph",
+                    )
+                )
+            if "orp" in chem_controller and chem_controller["orp"]["enabled"] is True:
+                new_devices.append(
+                    ChemControllerSetpoint(
+                        coordinator=coordinator,
+                        chem_controller=chem_controller,
+                        chem_type="orp",
+                    )
+                )
+            new_devices.append(
+                ChemControllerIndex(
+                    coordinator=coordinator,
+                    chem_controller=chem_controller,
+                    index_name="alkalinity",
+                )
+            )
+            new_devices.append(
+                ChemControllerIndex(
+                    coordinator=coordinator,
+                    chem_controller=chem_controller,
+                    index_name="cyanuricAcid",
+                )
+            )
+            new_devices.append(
+                ChemControllerIndex(
+                    coordinator=coordinator,
+                    chem_controller=chem_controller,
+                    index_name="calciumHardness",
+                )
+            )
+            new_devices.append(
+                ChemControllerIndex(
+                    coordinator=coordinator,
+                    chem_controller=chem_controller,
+                    index_name="borates",
+                )
+            )
 
+        except KeyError:
+            pass
     if new_devices:
         async_add_entities(new_devices)

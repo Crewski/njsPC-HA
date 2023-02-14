@@ -37,19 +37,13 @@ class FreezeProtectionSensor(PoolEquipmentEntity, BinarySensorEntity):
 
     def __init__(self, coordinator: NjsPCHAdata, data: Any) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.equipment_class = PoolEquipmentClass.CONTROL_PANEL
-
-
+        super().__init__(coordinator = coordinator, equipment_class=PoolEquipmentClass.CONTROL_PANEL, data=data)
         if "freeze" in data:
             self._value = data["freeze"]
             self._available = True
         else:
             self._value = None
             self._available = False
-
-        self.equipment_name = data["model"]
-        self.equipment_id = 0
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -107,11 +101,7 @@ class PanelModeSensor(PoolEquipmentEntity, SensorEntity):
         self, coordinator: NjsPCHAdata, data: Any
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.equipment_class = PoolEquipmentClass.CONTROL_PANEL
-        self.equipment_name = data["model"]
-        self.equipment_id = 0
-        self.equipment_model = PoolEquipmentModel.CONTROL_PANEL
+        super().__init__(coordinator = coordinator, equipment_class=PoolEquipmentClass.CONTROL_PANEL, data = data)
         self._state_attributes: dict[str, Any] = dict([])
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
         self._value = None
@@ -176,16 +166,12 @@ class TempProbeSensor(PoolEquipmentEntity, SensorEntity):
 
     def __init__(self, coordinator:NjsPCHAdata, key, units) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.coordinator = coordinator
-        self.equipment_class = PoolEquipmentClass.CONTROL_PANEL
-        self.equipment_id = 0
-        self.equipment_name = coordinator.model
-        self.equipment_model = PoolEquipmentModel.CONTROL_PANEL
-        self.coordinator_context = object()
+        super().__init__(coordinator=coordinator, equipment_class=PoolEquipmentClass.CONTROL_PANEL, data={"model":coordinator.model})
         self._key = key
+        self._value = None
         self._units = units
-        self._value = round(coordinator.api.config["temps"][key], 1)
+        if "temps" in coordinator.api.config and key in coordinator.api.config["temps"]:
+            self._value = round(coordinator.api.config["temps"][key], 1)
         self._available = True
 
     def _handle_coordinator_update(self) -> None:
@@ -270,17 +256,12 @@ class EquipmentStatusSensor(PoolEquipmentEntity, SensorEntity):
         event: str,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.equipment_class = equipment_class
-        self.equipment_id = equipment["id"]
-        self.equipment_name = equipment["name"]
-        self.equipment_model = equipment_model
-        self.coordinator_context = object()
-        self._value = equipment[STATUS][DESC]
+        super().__init__(coordinator=coordinator, equipment_class=equipment_class, data=equipment)
+        self._value = None
+        if STATUS in equipment and DESC in equipment[STATUS]:
+            self._value = equipment[STATUS][DESC]
         self._event = event
         self._available = True
-        # Below makes sure we have a name that makes sense for the entity.
-        self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_status"
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -290,7 +271,8 @@ class EquipmentStatusSensor(PoolEquipmentEntity, SensorEntity):
             self.coordinator.data["event"] == self._event
             and self.coordinator.data["id"] == self.equipment_id
         ):
-            self._value = self.coordinator.data[STATUS][DESC]
+            if STATUS in self.coordinator.data and DESC in self.coordinator.data[STATUS]:
+                self._value = self.coordinator.data[STATUS][DESC]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
@@ -316,7 +298,6 @@ class EquipmentStatusSensor(PoolEquipmentEntity, SensorEntity):
 
     @property
     def native_value(self) -> str | None:
-        # return self._equipment[STATUS][DESC]
         return self._value
 
     @property

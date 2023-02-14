@@ -22,6 +22,7 @@ from .chemistry import (
     SaltTargetSensor,
     CurrentOutputSensor,
     TargetOutputSensor,
+    SaturationIndexSensor,
 )
 from .pumps import PumpPowerSensor, PumpFlowSensor, PumpSpeedSensor
 from .controller import PanelModeSensor, TempProbeSensor
@@ -56,7 +57,9 @@ async def async_setup_entry(
 
     new_devices.append(PanelModeSensor(coordinator, config))
     if "temps" in config:
-        units = config["temps"]["units"]["name"]
+        units = "F"
+        if "units" in config["temps"]:
+            units = config["temps"]["units"]["name"]
         for key in config["temps"]:
             if (
                 key == "air"
@@ -207,6 +210,20 @@ async def async_setup_entry(
                                 chemical=chemical,
                             )
                         )
+            new_devices.append(
+                SaturationIndexSensor(
+                    coordinator=coordinator,
+                    chem_controller=chem_controller,
+                    index_name="lsi",
+                )
+            )
+            new_devices.append(
+                SaturationIndexSensor(
+                    coordinator=coordinator,
+                    chem_controller=chem_controller,
+                    index_name="csi",
+                )
+            )
     for pool_filter in config["filters"]:
         new_devices.append(
             FilterPressureSensor(coordinator=coordinator, pool_filter=pool_filter)
@@ -231,17 +248,16 @@ class EquipmentStatusSensor(PoolEquipmentEntity, SensorEntity):
         event: str,
     ) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator)
-        self.equipment_class = equipment_class
-        self.equipment_id = equipment["id"]
-        self.equipment_name = equipment["name"]
-        self.equipment_model = equipment_model
-        self.coordinator_context = object()
-        self._value = equipment[STATUS][DESC]
+        super().__init__(
+            coordinator=coordinator,
+            equipment_class=equipment_class,
+            data=equipment,
+        )
+        if STATUS in equipment and DESC in equipment[STATUS]:
+            self._value = equipment[STATUS][DESC]
         self._event = event
         self._available = True
         # Below makes sure we have a name that makes sense for the entity.
-        self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_status"
         self._attr_entity_category = EntityCategory.DIAGNOSTIC
 
@@ -251,7 +267,11 @@ class EquipmentStatusSensor(PoolEquipmentEntity, SensorEntity):
             self.coordinator.data["event"] == self._event
             and self.coordinator.data["id"] == self.equipment_id
         ):
-            self._value = self.coordinator.data[STATUS][DESC]
+            if (
+                STATUS in self.coordinator.data
+                and DESC in self.coordinator.data[STATUS]
+            ):
+                self._value = self.coordinator.data[STATUS][DESC]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]

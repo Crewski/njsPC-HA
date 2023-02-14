@@ -11,7 +11,6 @@ from homeassistant.core import HomeAssistant
 
 from .const import (
     PoolEquipmentClass,
-    PoolEquipmentModel,
     API_CIRCUIT_SETSTATE,
     API_CIRCUIT_SETTHEME,
     API_LIGHTGROUP_SETSTATE,
@@ -64,7 +63,6 @@ async def async_setup_entry(
     if new_devices:
         async_add_entities(new_devices)
 
-
 class CircuitLight(PoolEquipmentEntity, LightEntity):
     """Light entity for njsPC-HA."""
 
@@ -76,29 +74,24 @@ class CircuitLight(PoolEquipmentEntity, LightEntity):
         lightthemes: Any,
     ) -> None:
         """Initialize the light."""
-        super().__init__(coordinator)
-        self.coordinator = coordinator
-        self.equipment_id = circuit["id"]
-        self.equipment_class = equipment_class
-        self.equipment_model = PoolEquipmentModel.LIGHT
-        self.equipment_name = circuit["name"]
-        self.coordinator_context = object()
+        match equipment_class:
+            case PoolEquipmentClass.LIGHT:
+                super().__init__(coordinator=coordinator, equipment_class=PoolEquipmentClass.LIGHT, data=circuit)
+                self._event = EVENT_CIRCUIT
+                self._command = API_CIRCUIT_SETSTATE
+            case PoolEquipmentClass.LIGHT_GROUP:
+                super().__init__(coordinator=coordinator, equipment_class=PoolEquipmentClass.LIGHT_GROUP, data=circuit)
+                self._event = EVENT_LIGHTGROUP
+                self._command = API_LIGHTGROUP_SETSTATE
         self._lightthemes = lightthemes
         self._event = None
         self._command = None
         self._value = None
+        self._available = True
         if "isOn" in circuit:
             self._value = circuit["isOn"]
         self._lighting_theme = None
-        match equipment_class:
-            case PoolEquipmentClass.LIGHT:
-                self._event = EVENT_CIRCUIT
-                self._command = API_CIRCUIT_SETSTATE
-            case PoolEquipmentClass.LIGHT_GROUP:
-                self._event = EVENT_LIGHTGROUP
-                self._command = API_LIGHTGROUP_SETSTATE
-                self.equipment_model = PoolEquipmentModel.LIGHT_GROUP
-        self._available = True
+        self._attr_has_entity_name = False
         if "lightingTheme" in circuit:
             self._lighting_theme = circuit["lightingTheme"]["val"]
 
