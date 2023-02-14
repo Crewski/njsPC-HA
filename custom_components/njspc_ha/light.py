@@ -91,6 +91,7 @@ class CircuitLight(PoolEquipmentEntity, LightEntity):
         if "isOn" in circuit:
             self._value = circuit["isOn"]
         self._lighting_theme = None
+        self._attr_has_entity_name = False
         if "lightingTheme" in circuit:
             self._lighting_theme = circuit["lightingTheme"]["val"]
 

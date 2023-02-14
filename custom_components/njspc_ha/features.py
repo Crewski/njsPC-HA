@@ -53,7 +53,7 @@ class CircuitSwitch(PoolEquipmentEntity, SwitchEntity):
             case PoolEquipmentClass.LIGHT_GROUP:
                 self._event = EVENT_LIGHTGROUP
                 self._command = API_LIGHTGROUP_SETSTATE
-
+        self._attr_has_entity_name = False
         self._available = True
         self._value = False
         if "isOn" in circuit:
@@ -116,7 +116,6 @@ class LightCommandButton(PoolEquipmentEntity, ButtonEntity):
         """Initialize the button."""
         super().__init__(coordinator=coordinator, equipment_class=equipment_class, data=circuit)
         self._command = command
-        self._attr_device_class = f"{self.equipment_name}_{command['name']}"
 
     async def async_press(self) -> None:
         """Button has been pressed"""

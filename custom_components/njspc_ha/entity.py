@@ -1,7 +1,6 @@
 """Base Entity for njsPC."""
 from __future__ import annotations
 
-from typing import Any
 from homeassistant.helpers.entity import DeviceInfo, Entity
 from . import NjsPCHAdata
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -112,31 +111,7 @@ class PoolEquipmentEntity(CoordinatorEntity[NjsPCHAdata], Entity):
             else:
                 self.equipment_name = dev.label
         self._attr_has_entity_name = True
-
-    def __init1__(
-        self,
-        coordinator: NjsPCHAdata,
-        equipment_class: PoolEquipmentClass,
-        equipment_model: PoolEquipmentModel,
-        data: Any,
-    ) -> None:
-        """Initialize the entity."""
-        super().__init__(coordinator)
-        self.coordinator = coordinator
-        self.equipment_class = equipment_class
-        self.equipment_id = 0
-        self.equipment_name = None
-        if "id" in data:
-            self.equipment_id = data["id"]
-        if equipment_model is None:
-            self.equipment_model = coordinator.model
-        else:
-            self.equipment_model = equipment_model
-        if "name" in data:
-            self.equipment_name = data["name"]
-        else:
-            self.equipment_name = f"{self.equipment_class}{self.equipment_id}"
-        self._attr_has_entity_name = True
+        self._available = True
 
     def format_duration(self, secs: int) -> str:
         """Format a number of seconds into an output string"""

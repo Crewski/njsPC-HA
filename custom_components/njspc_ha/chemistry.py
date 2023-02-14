@@ -55,7 +55,6 @@ class ChemControllerSetpoint(PoolEquipmentEntity, NumberEntity):
         self._state_attributes: dict[str, Any] = dict([])
         self._value = None
         self._available = True
-        self._attr_device_class = f"{self.equipment_name}_{self.chem_type}_setpoint"
         if self.chem_type in chem_controller and chem_controller[self.chem_type]["setpoint"]:
             self._value = chem_controller[self.chem_type]["setpoint"]
 
@@ -156,8 +155,6 @@ class ChemControllerIndex(PoolEquipmentEntity, NumberEntity):
         self._state_attributes: dict[str, Any] = dict([])
         self._value = None
         self._available = True
-        # Below makes sure we have a name that makes sense for the entity.
-        self._attr_device_class = f"{self.equipment_name}_{self.index_name}_setpoint"
         if self.index_name in chem_controller:
             self._value = chem_controller[self.index_name]
 
@@ -283,8 +280,6 @@ class ChemistryDosingStatus(PoolEquipmentEntity, SensorEntity):
         else:
             self._value = "Unknown"
             self._available = False
-        # Below makes sure we have a name that makes sense for the entity.
-        self._attr_device_class = f"{self.equipment_name}_{self.chem_type}_dosing_status"
 
 
     def _handle_coordinator_update(self) -> None:
@@ -328,6 +323,11 @@ class ChemistryDosingStatus(PoolEquipmentEntity, SensorEntity):
     @property
     def name(self) -> str | None:
         """Name of the sensor"""
+        match(self.chem_type):
+            case "ph":
+                return "pH Dosing Status"
+            case "orp":
+                return "ORP Dosing Status"
         return f"{self.chem_type} Dosing Status"
 
     @property
@@ -368,8 +368,6 @@ class ChemistryDemandSensor(PoolEquipmentEntity, SensorEntity):
         self._state_attributes: dict[str, Any] = dict([])
         self.chem_type = chemical["type"]
         self._value = None
-        # Below makes sure we have a name that makes sense for the entity.
-        self._attr_device_class = f"{self.equipment_name}_{self.chem_type}_demand"
 
         if "demand" in chemical:
             self._value = chemical["demand"]
@@ -415,6 +413,11 @@ class ChemistryDemandSensor(PoolEquipmentEntity, SensorEntity):
     @property
     def name(self) -> str | None:
         """Name of the sensor"""
+        match(self.chem_type):
+            case "ph":
+                return "Acid Demand"
+            case "orp":
+                return "ORP Demand"
         return f"{self.chem_type} Demand"
 
     @property
@@ -474,8 +477,6 @@ class ChemistryTankLevel(PoolEquipmentEntity, SensorEntity):
             self._available = True
         else:
             self._available = False
-        self._attr_has_entity_name = True
-        self._attr_device_class = f"{self.equipment_name}_{self.chem_type}_tanklevel"
 
 
     def _handle_coordinator_update(self) -> None:
@@ -518,6 +519,11 @@ class ChemistryTankLevel(PoolEquipmentEntity, SensorEntity):
     @property
     def name(self) -> str | None:
         """Name of the sensor"""
+        match(self.chem_type):
+            case "ph":
+                return "Acid Tank Level"
+            case "orp":
+                return "Chlorine Tank Level"
         return f"{self.chem_type} Tank Level"
 
     @property
@@ -559,8 +565,6 @@ class SaturationIndexSensor(PoolEquipmentEntity, SensorEntity):
         self._state_attributes: dict[str, str] = dict([])
         self.index_name = index_name
         self._available = True
-        self._attr_has_entity_name = True
-        self._attr_device_class = f"{self.equipment_name}_{self.index_name}_index"
         self._value = None
         if self.index_name in chem_controller:
             self._value = chem_controller[self.index_name]
@@ -644,7 +648,6 @@ class ChemistrySensor(PoolEquipmentEntity, SensorEntity):
         if "level" in chemical:
             self._value = chemical["level"]
         self._available = True
-        self._attr_device_class = f"{self.equipment_name}_{self.chem_type}_level"
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -678,6 +681,11 @@ class ChemistrySensor(PoolEquipmentEntity, SensorEntity):
     @property
     def name(self) -> str | None:
         """Name of the sensor"""
+        match(self.chem_type):
+            case "ph":
+                return "pH Level"
+            case "orp":
+                return "ORP Level"
         return f"{self.chem_type} Level"
 
     @property
@@ -727,8 +735,6 @@ class SaltSensor(PoolEquipmentEntity, SensorEntity):
             self.salt_required = chlorinator[SALT_REQUIRED]
         if SALT_TARGET in chlorinator:
             self.salt_target = chlorinator[SALT_TARGET]
-        self._attr_device_class = f"{self.equipment_name}_saltlevel"
-
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -804,7 +810,6 @@ class SaltTargetSensor(PoolEquipmentEntity, SensorEntity):
             self._value = chlorinator[SALT_TARGET]
         self._available = True
         self._attr_has_entity_name = True
-        self._attr_device_class = f"{self.equipment_name}_salttarget"
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -867,7 +872,6 @@ class SaltRequiredSensor(PoolEquipmentEntity, SensorEntity):
         if SALT_REQUIRED in chlorinator:
             self._value = chlorinator[SALT_REQUIRED]
         self._available = True
-        self._attr_device_class = f"{self.equipment_name}_saltrequired"
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -932,8 +936,6 @@ class CurrentOutputSensor(PoolEquipmentEntity, SensorEntity):
         if TARGET_OUTPUT in chlorinator:
             self.target_output = chlorinator[TARGET_OUTPUT]
         self._available = True
-        self._attr_device_class = f"{self.equipment_name}_currentoutput"
-
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -1005,8 +1007,6 @@ class TargetOutputSensor(PoolEquipmentEntity, SensorEntity):
         if CURRENT_OUTPUT in chlorinator:
             self.current_output = chlorinator[CURRENT_OUTPUT]
         self._available = True
-        self._attr_device_class = f"{self.equipment_name}_targetoutput"
-
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -1070,8 +1070,6 @@ class ChlorinatorSetpoint(PoolEquipmentEntity, NumberEntity):
         self._value = None
         if setpoint in chlorinator:
             self._value = chlorinator[setpoint]
-        self._attr_has_entity_name = True
-        self._attr_device_class = f"{self.equipment_class}_{setpoint}"
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -1148,9 +1146,6 @@ class SuperChlorHours(PoolEquipmentEntity, NumberEntity):
         if SUPER_CHLOR_HOURS in chlorinator:
             self._value = chlorinator[SUPER_CHLOR_HOURS]
         self._available = True
-        self._attr_has_entity_name = True
-        self._attr_device_class = f"{self.equipment_name}_superchlor_hours"
-
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -1229,7 +1224,6 @@ class SuperChlorSwitch(PoolEquipmentEntity, SwitchEntity):
         if SUPER_CHLOR in chlorinator:
             self._value = chlorinator[SUPER_CHLOR]
         self._available = True
-        self._attr_device_class = f"{self.equipment_name}_superchlorinate"
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""

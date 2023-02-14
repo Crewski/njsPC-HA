@@ -323,6 +323,7 @@ class BodyCircuitSwitch(PoolEquipmentEntity, SwitchEntity):
         self._command = None
         self._available = True
         self._value = False
+        self._attr_has_entity_name = False
         self.circuit_id = circuit["id"]
         self.circuit_name = circuit["name"]
         if "isOn" in circuit:
