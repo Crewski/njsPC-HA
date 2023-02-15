@@ -84,8 +84,6 @@ class CircuitLight(PoolEquipmentEntity, LightEntity):
         self.equipment_name = circuit["name"]
         self.coordinator_context = object()
         self._lightthemes = lightthemes
-        self._event = None
-        self._command = None
         self._value = None
         if "isOn" in circuit:
             self._value = circuit["isOn"]
