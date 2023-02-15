@@ -84,8 +84,6 @@ class CircuitLight(PoolEquipmentEntity, LightEntity):
                 self._event = EVENT_LIGHTGROUP
                 self._command = API_LIGHTGROUP_SETSTATE
         self._lightthemes = lightthemes
-        self._event = None
-        self._command = None
         self._value = None
         self._available = True
         if "isOn" in circuit:
