@@ -13,7 +13,7 @@ Add the respository URL as a custom [repository integration](https://hacs.xyz/do
 Copy the njspc_ha folder from this repo to config/custom_components (create custom_components folder if it doesn't exist already)
 
 ## Setup
-Once njsPC-HA is installed, you can set it up by adding it as an integration.  You'll need to know the IP Address of nodejs-PoolController and the port (defaults to 4200 which is the standard port).
+Once njsPC-HA is installed, you can set it up by adding it as an integration.  The integration should automatically find the instance of nodejs-poolcontroller for you.  It it doesn't, it'll prompt you to enter the IP address and port (default 4200).
 
 
 # Data
@@ -45,9 +45,9 @@ njsPC-HA communicates with nodejs-PoolController via the native API, the same wa
     - Status
     - Salt Target
     - Salt Needed
+- pH/Orp
 
 ## Not Supported
-- pH/Orp
 - ?????
 
 # Home Assistant
