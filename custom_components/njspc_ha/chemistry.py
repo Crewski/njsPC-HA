@@ -740,9 +740,10 @@ class SaltSensor(PoolEquipmentEntity, SensorEntity):
         """Handle updated data from the coordinator."""
         if (
             self.coordinator.data["event"] == EVENT_CHLORINATOR
-            and self.coordinator.data["id"] == self.entity_id
+            and self.coordinator.data["id"] == self.equipment_id
         ):
             # self._chlorinator = self.coordinator.data
+            
             if SALT_LEVEL in self.coordinator.data:
                 self._value = self.coordinator.data[SALT_LEVEL]
             if SALT_TARGET in self.coordinator.data:
