@@ -82,10 +82,6 @@ async def async_setup_entry(
                     new_devices.append(
                         BodyTempSensor(coordinator=coordinator, units=units, body=body)
                     )
-                if "isCovered" in body:
-                    new_devices.append(
-                        BodyCoveredSensor(coordinator=coordinator, body=body)
-                    )
 
     for pump in config["pumps"]:
         # Pump sensors vary by type. This may need a re-visit for pump types that use a
