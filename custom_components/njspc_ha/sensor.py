@@ -26,7 +26,7 @@ from .chemistry import (
 )
 from .pumps import PumpPowerSensor, PumpFlowSensor, PumpSpeedSensor
 from .controller import PanelModeSensor, TempProbeSensor
-from .bodies import BodyTempSensor, FilterPressureSensor, FilterCleanSensor
+from .bodies import BodyTempSensor, FilterPressureSensor, FilterCleanSensor, BodyCoveredSensor
 from .const import (
     PoolEquipmentClass,
     PoolEquipmentModel,
@@ -81,6 +81,10 @@ async def async_setup_entry(
                 if "temp" in body:
                     new_devices.append(
                         BodyTempSensor(coordinator=coordinator, units=units, body=body)
+                    )
+                if "isCovered" in body:
+                    new_devices.append(
+                        BodyCoveredSensor(coordinator=coordinator, body=body)
                     )
 
     for pump in config["pumps"]:
