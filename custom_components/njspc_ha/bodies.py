@@ -4,7 +4,12 @@ from __future__ import annotations
 from typing import Any
 
 
-from homeassistant.const import UnitOfTemperature, UnitOfPressure, ATTR_TEMPERATURE, PERCENTAGE
+from homeassistant.const import (
+    UnitOfTemperature,
+    UnitOfPressure,
+    ATTR_TEMPERATURE,
+    PERCENTAGE,
+)
 
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.components.climate import (
@@ -19,7 +24,9 @@ from homeassistant.components.sensor import (
     SensorStateClass,
     SensorDeviceClass,
 )
-from homeassistant.components.binary_sensor import BinarySensorEntity
+from homeassistant.components.binary_sensor import (
+    BinarySensorEntity,
+)
 
 from .entity import PoolEquipmentEntity
 from .__init__ import NjsPCHAdata
@@ -46,12 +53,18 @@ NJSPC_HVAC_ACTION_TO_HASS = {
     "hpcool": HVACAction.COOLING,
     "cooldown": HVACAction.OFF,
 }
+
+
 class FilterOnSensor(PoolEquipmentEntity, BinarySensorEntity):
     """The current running state for a pump"""
 
     def __init__(self, coordinator: NjsPCHAdata, pool_filter: Any) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator=coordinator, equipment_class=PoolEquipmentClass.FILTER, data=pool_filter)
+        super().__init__(
+            coordinator=coordinator,
+            equipment_class=PoolEquipmentClass.FILTER,
+            data=pool_filter,
+        )
         self._value = False
         if "isOn" in pool_filter:
             self._value = pool_filter["isOn"]
@@ -104,12 +117,17 @@ class FilterOnSensor(PoolEquipmentEntity, BinarySensorEntity):
             return "mdi:filter"
         return "mdi:filter-off"
 
+
 class FilterCleanSensor(PoolEquipmentEntity, SensorEntity):
     """Sensor for filter clean percentage"""
 
     def __init__(self, coordinator: NjsPCHAdata, pool_filter: Any) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator=coordinator, equipment_class=PoolEquipmentClass.FILTER, data=pool_filter)
+        super().__init__(
+            coordinator=coordinator,
+            equipment_class=PoolEquipmentClass.FILTER,
+            data=pool_filter,
+        )
         self._value = None
         if "cleanPercentage" in pool_filter:
             self._value = pool_filter["cleanPercentage"]
@@ -162,12 +180,17 @@ class FilterCleanSensor(PoolEquipmentEntity, SensorEntity):
     def native_unit_of_measurement(self) -> str | UnitOfTemperature | None:
         return PERCENTAGE
 
+
 class FilterPressureSensor(PoolEquipmentEntity, SensorEntity):
     """Sensor for filter pressure"""
 
     def __init__(self, coordinator: NjsPCHAdata, pool_filter: Any) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator=coordinator, equipment_class=PoolEquipmentClass.FILTER, data=pool_filter)
+        super().__init__(
+            coordinator=coordinator,
+            equipment_class=PoolEquipmentClass.FILTER,
+            data=pool_filter,
+        )
         self._value = 0
         self._units = "psi"
         if "pressure" in pool_filter:
@@ -186,7 +209,10 @@ class FilterPressureSensor(PoolEquipmentEntity, SensorEntity):
         ):
             if "pressure" in self.coordinator.data:
                 self._value = self.coordinator.data["pressure"]
-            if "pressureUnits" in self.coordinator.data and "name" in self.coordinator.data["pressureUnits"]:
+            if (
+                "pressureUnits" in self.coordinator.data
+                and "name" in self.coordinator.data["pressureUnits"]
+            ):
                 self._units = self.coordinator.data["pressureUnits"]["name"]
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
@@ -237,12 +263,15 @@ class FilterPressureSensor(PoolEquipmentEntity, SensorEntity):
             case _:
                 return UnitOfPressure.PSI
 
+
 class BodyTempSensor(PoolEquipmentEntity, SensorEntity):
     """Body Temp Sensor for njsPC-HA"""
 
     def __init__(self, coordinator: NjsPCHAdata, units: str, body: Any) -> None:
         """Initialize the sensor."""
-        super().__init__(coordinator=coordinator, equipment_class=PoolEquipmentClass.BODY, data=body)
+        super().__init__(
+            coordinator=coordinator, equipment_class=PoolEquipmentClass.BODY, data=body
+        )
         self._units = units
         self._value = None
         if "temp" in body:
@@ -303,6 +332,7 @@ class BodyTempSensor(PoolEquipmentEntity, SensorEntity):
             return UnitOfTemperature.FAHRENHEIT
         return UnitOfTemperature.CELSIUS
 
+
 class BodyCircuitSwitch(PoolEquipmentEntity, SwitchEntity):
     """Body Circuit switch for njsPC-HA"""
 
@@ -315,7 +345,9 @@ class BodyCircuitSwitch(PoolEquipmentEntity, SwitchEntity):
         """Initialize the sensor."""
         # Need to add delays to this at some point.  We will get
         # delay messages when this happens
-        super().__init__(coordinator=coordinator,equipment_class=PoolEquipmentClass.BODY, data=body)
+        super().__init__(
+            coordinator=coordinator, equipment_class=PoolEquipmentClass.BODY, data=body
+        )
         self.body_type = "pool"
         if "type" in body:
             self.body_type = body["type"]["name"]
@@ -386,6 +418,7 @@ class BodyCircuitSwitch(PoolEquipmentEntity, SwitchEntity):
         else:
             return "mdi:toggle-switch-variant"
 
+
 class BodyHeater(PoolEquipmentEntity, ClimateEntity):
     """Climate entity for njsPC-HA"""
 
@@ -410,7 +443,9 @@ class BodyHeater(PoolEquipmentEntity, ClimateEntity):
     # This is not the heater device and we may add it later to show diagnostic data.
     def __init__(self, coordinator, body, heatmodes, units, has_cooling) -> None:
         """Initialize the body heater."""
-        super().__init__(coordinator=coordinator, equipment_class=PoolEquipmentClass.BODY, data=body)
+        super().__init__(
+            coordinator=coordinator, equipment_class=PoolEquipmentClass.BODY, data=body
+        )
         self._heatmodes = heatmodes
         self._units = units
         self._available = True
@@ -654,3 +689,59 @@ class BodyHeater(PoolEquipmentEntity, ClimateEntity):
             return
         data = {"id": self.equipment_id, "mode": njspc_value}
         await self.coordinator.api.command(url=API_SET_HEATMODE, data=data)
+
+
+class BodyCoveredSensor(PoolEquipmentEntity, BinarySensorEntity):
+    """The current status of a body cover"""
+
+    def __init__(self, coordinator: NjsPCHAdata, body: Any) -> None:
+        """Initialize the sensor."""
+        super().__init__(
+            coordinator=coordinator, equipment_class=PoolEquipmentClass.BODY, data=body
+        )
+        self._value = False
+        if "isCovered" in body:
+            self._value = body["isCovered"]
+        self._available = True
+
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if (
+            self.coordinator.data["event"] == EVENT_BODY
+            and self.coordinator.data["id"] == self.equipment_id
+        ):
+            if "isCovered" in self.coordinator.data:
+                self._value = self.coordinator.data["isCovered"]
+            self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self) -> bool:
+        return False
+
+    @property
+    def available(self) -> bool:
+        return self._available
+
+    @property
+    def name(self) -> str | None:
+        """Name of the sensor"""
+        return "Cover"
+
+    @property
+    def unique_id(self) -> str | None:
+        """ID of the sensor"""
+        return f"{self.coordinator.controller_id}_{self.equipment_class}_{self.equipment_id}_isCovered"
+
+    @property
+    def is_on(self) -> bool:
+        """Return if the body is covered."""
+        return self._value
+
+    @property
+    def icon(self) -> str:
+        if self._value is True:
+            return "mdi:arrow-down-drop-circle"
+        return "mdi:arrow-up-drop-circle-outline"
