@@ -26,6 +26,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
+    BinarySensorDeviceClass
 )
 
 from .entity import PoolEquipmentEntity
@@ -738,10 +739,15 @@ class BodyCoveredSensor(PoolEquipmentEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         """Return if the body is covered."""
-        return self._value
+        # we want the opposite of the isCovered field
+        return not self._value
 
     @property
     def icon(self) -> str:
         if self._value is True:
             return "mdi:arrow-down-drop-circle"
         return "mdi:arrow-up-drop-circle-outline"
+    
+    @property
+    def device_class(self) -> BinarySensorDeviceClass | None:
+        return BinarySensorDeviceClass.DOOR

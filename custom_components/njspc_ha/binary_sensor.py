@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 
 from .controller import FreezeProtectionSensor
 from .pumps import PumpOnSensor
-from .bodies import FilterOnSensor
+from .bodies import FilterOnSensor, BodyCoveredSensor
 from .features import VirtualCircuit
 
 from .const import (
@@ -43,6 +43,13 @@ async def async_setup_entry(
                     VirtualCircuit(
                         coordinator=coordinator, virtual_circuit=virtual_circuit
                     )
+                )
+
+    if "bodies" in config["temps"]:  # We can have Nobody Nixie systems (equipment only)
+        for body in list(config["temps"]["bodies"]):
+            if "isCovered" in body:
+                new_devices.append(
+                    BodyCoveredSensor(coordinator=coordinator, body=body)
                 )
 
     if new_devices:
