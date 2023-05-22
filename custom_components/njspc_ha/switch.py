@@ -118,6 +118,7 @@ async def async_setup_entry(
                 equipment_class=equipment_class,
                 schedule=schedule,
                 body=_body,
+                clockMode=config["clockMode"]["val"]
             )
         )
 

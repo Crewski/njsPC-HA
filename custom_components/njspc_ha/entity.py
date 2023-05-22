@@ -130,6 +130,11 @@ class PoolEquipmentEntity(CoordinatorEntity[NjsPCHAdata], Entity):
             formatted = f"{formatted} {sec}sec"
         return formatted
 
+            
+
+
+
+
     @property
     def device_info(self) -> DeviceInfo | None:
         """Device info"""
