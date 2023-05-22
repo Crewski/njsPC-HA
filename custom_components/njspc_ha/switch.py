@@ -15,6 +15,7 @@ from .const import (
 from .features import CircuitSwitch
 from .chemistry import SuperChlorSwitch
 from .bodies import BodyCircuitSwitch
+from .schedules import ScheduleSwitch
 
 
 async def async_setup_entry(
@@ -84,6 +85,41 @@ async def async_setup_entry(
             new_devices.append(
                 SuperChlorSwitch(coordinator=coordinator, chlorinator=chlorinator)
             )
+
+    for schedule in config["schedules"]:
+        equipment_class = PoolEquipmentClass.AUX_CIRCUIT
+        _body = None
+        match schedule["circuit"]["equipmentType"]:
+            case "circuit":
+                try:
+                    if schedule["circuit"]["id"] == 1 or schedule["circuit"]["id"] == 6:
+                        for body in config["temps"]["bodies"]:
+                            if (
+                                body["circuit"] == schedule["circuit"]["id"]
+                                and "name" in schedule["circuit"]
+                            ):
+                                _body = body
+                                equipment_class = PoolEquipmentClass.BODY
+                    elif schedule["circuit"]["type"]["isLight"]:
+                        equipment_class = PoolEquipmentClass.LIGHT
+                    else:
+                        equipment_class = PoolEquipmentClass.AUX_CIRCUIT
+                except KeyError:
+                    equipment_class = PoolEquipmentClass.AUX_CIRCUIT
+            case "circuitGroup":
+                equipment_class = PoolEquipmentClass.CIRCUIT_GROUP
+            case "feature":
+                equipment_class = PoolEquipmentClass.FEATURE
+            case "lightGroup":
+                equipment_class = PoolEquipmentClass.LIGHT_GROUP
+        new_devices.append(
+            ScheduleSwitch(
+                coordinator=coordinator,
+                equipment_class=equipment_class,
+                schedule=schedule,
+                body=_body,
+            )
+        )
 
     if new_devices:
         async_add_entities(new_devices)
