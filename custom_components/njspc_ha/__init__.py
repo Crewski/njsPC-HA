@@ -45,6 +45,7 @@ from .const import (
     EVENT_FILTER,
     EVENT_VIRTUAL_CIRCUIT,
     EVENT_TEMPS,
+    EVENT_SCHEDULE,
 )
 
 
@@ -185,6 +186,11 @@ class NjsPCHAdata(DataUpdateCoordinator):
         @self.sio.on("virtualCircuit")
         async def handle_virtual_circuit(data):
             data["event"] = EVENT_VIRTUAL_CIRCUIT
+            self.async_set_updated_data(data)
+
+        @self.sio.on("schedule")
+        async def handle_schedule(data):
+            data["event"] = EVENT_SCHEDULE
             self.async_set_updated_data(data)
 
         @self.sio.event
