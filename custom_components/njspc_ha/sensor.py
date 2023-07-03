@@ -144,6 +144,21 @@ async def async_setup_entry(
         ):
             if "ph" in chem_controller:
                 chemical = chem_controller["ph"]
+                new_devices.append(
+                    ChemistrySensor(
+                        coordinator=coordinator,
+                        chem_controller=chem_controller,
+                        chemical=chemical,
+                    )
+                )
+                new_devices.append(
+                    ChemistryDemandSensor(
+                        coordinator=coordinator,
+                        chem_controller=chem_controller,
+                        chemical=chemical,
+                    )
+                )
+                
                 if chemical["enabled"] is True:
                     new_devices.append(
                         ChemistryDosingStatus(
@@ -152,21 +167,7 @@ async def async_setup_entry(
                             chemical=chemical,
                         )
                     )
-                    new_devices.append(
-                        ChemistrySensor(
-                            coordinator=coordinator,
-                            chem_controller=chem_controller,
-                            chemical=chemical,
-                        )
-                    )
-                    new_devices.append(
-                        ChemistryDemandSensor(
-                            coordinator=coordinator,
-                            chem_controller=chem_controller,
-                            chemical=chemical,
-                        )
-                    )
-                    if "tank" in chemical:
+                    if "tank" in chemical and "capacity" in chemical["tank"] and chemical["tank"]["capacity"] > 0:
                         new_devices.append(
                             ChemistryTankLevel(
                                 coordinator=coordinator,
@@ -177,6 +178,21 @@ async def async_setup_entry(
 
             if "orp" in chem_controller:
                 chemical = chem_controller["orp"]
+                new_devices.append(
+                    ChemistrySensor(
+                        coordinator=coordinator,
+                        chem_controller=chem_controller,
+                        chemical=chem_controller["orp"],
+                    )
+                )
+                new_devices.append(
+                    ChemistryDemandSensor(
+                        coordinator=coordinator,
+                        chem_controller=chem_controller,
+                        chemical=chemical,
+                    )
+                )
+
                 if chemical["enabled"] is True:
                     new_devices.append(
                         ChemistryDosingStatus(
@@ -185,23 +201,10 @@ async def async_setup_entry(
                             chemical=chemical,
                         )
                     )
-                    new_devices.append(
-                        ChemistrySensor(
-                            coordinator=coordinator,
-                            chem_controller=chem_controller,
-                            chemical=chem_controller["orp"],
-                        )
-                    )
-                    new_devices.append(
-                        ChemistryDemandSensor(
-                            coordinator=coordinator,
-                            chem_controller=chem_controller,
-                            chemical=chemical,
-                        )
-                    )
                     if (
                         "tank" in chemical
                         and chemical["doserType"]["name"] != "chlorinator"
+                        and "capacity" in chemical["tank"] and chemical["tank"]["capacity"] > 0
                     ):
                         new_devices.append(
                             ChemistryTankLevel(
