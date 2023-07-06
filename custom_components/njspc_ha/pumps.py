@@ -29,6 +29,68 @@ from .const import (
     PoolEquipmentClass,
 )
 
+class PumpProgramSensor(PoolEquipmentEntity, SensorEntity):
+    """Program Pump Sensor for njsPC-HA"""
+
+    def __init__(self, coordinator: NjsPCHAdata, pump: Any) -> None:
+        """Initialize the sensor."""
+        super().__init__(
+            coordinator=coordinator,
+            equipment_class=PoolEquipmentClass.PUMP,
+            data=pump,
+        )
+        self._value = None
+        if "command" in pump:
+            self._value = pump["command"]
+        self._available = True
+        self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_program"
+
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if (
+            self.coordinator.data["event"] == EVENT_PUMP
+            and self.coordinator.data["id"] == self.equipment_id
+            and "command" in self.coordinator.data
+        ):
+            if "command" in self.coordinator.data:
+                self._available = True
+                self._value = f'Program #{self.coordinator.data["command"]}'
+            else:
+                self._available = False
+                self._value = None
+            self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self) -> bool:
+        return False
+
+    @property
+    def available(self) -> bool:
+        return self._available
+
+    @property
+    def name(self) -> str:
+        """Name of the sensor"""
+        return "Program"
+
+    @property
+    def unique_id(self) -> str:
+        """ID of the sensor"""
+        return f"{self.coordinator.controller_id}_{self.equipment_class}_{self.equipment_id}_program"
+
+    @property
+    def native_value(self) -> int:
+        """Raw value of the sensor"""
+        return self._value
+
+    @property
+    def icon(self) -> str:
+        return "mdi:speedometer"
+
+
 
 class PumpSpeedSensor(PoolEquipmentEntity, SensorEntity):
     """RPM Pump Sensor for njsPC-HA"""
