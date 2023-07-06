@@ -7,6 +7,7 @@ from homeassistant.core import HomeAssistant
 
 
 from .controller import FreezeProtectionSensor
+from .chemistry import FlowDetectedSensor
 from .pumps import PumpOnSensor
 from .bodies import FilterOnSensor, BodyCoveredSensor
 from .features import VirtualCircuit
@@ -51,6 +52,20 @@ async def async_setup_entry(
                 new_devices.append(
                     BodyCoveredSensor(coordinator=coordinator, body=body)
                 )
+
+    for chem_controller in config["chemControllers"]:
+        if (
+            "name" in chem_controller
+            and "type" in chem_controller
+            and "name" in chem_controller["type"]
+            and chem_controller["type"]["name"] != "none"
+        ):
+            new_devices.append(
+                FlowDetectedSensor(
+                    coordinator=coordinator,
+                    chem_controller=chem_controller
+                )
+            )
 
     if new_devices:
         async_add_entities(new_devices)
