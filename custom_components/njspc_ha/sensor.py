@@ -24,7 +24,7 @@ from .chemistry import (
     TargetOutputSensor,
     SaturationIndexSensor,
 )
-from .pumps import PumpPowerSensor, PumpFlowSensor, PumpSpeedSensor
+from .pumps import PumpPowerSensor, PumpFlowSensor, PumpSpeedSensor, PumpProgramSensor
 from .controller import PanelModeSensor, TempProbeSensor
 from .bodies import BodyTempSensor, FilterPressureSensor, FilterCleanSensor, BodyCoveredSensor
 from .const import (
@@ -92,6 +92,9 @@ async def async_setup_entry(
                 new_devices.append(PumpSpeedSensor(coordinator=coordinator, pump=pump))
             if "maxFlow" in pump_type:
                 new_devices.append(PumpFlowSensor(coordinator=coordinator, pump=pump))
+            if "relays" in pump_type:
+                new_devices.append(PumpProgramSensor(coordinator=coordinator, pump=pump))
+
             if "maxSpeed" in pump_type or "maxFlow" in pump_type:
                 new_devices.append(PumpPowerSensor(coordinator=coordinator, pump=pump))
             if STATUS in pump:
