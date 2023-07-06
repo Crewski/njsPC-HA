@@ -19,6 +19,9 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorStateClass,
 )
+from homeassistant.components.binary_sensor import (
+    BinarySensorEntity
+)
 from homeassistant.components.number import (
     NumberEntity,
     NumberMode
@@ -42,6 +45,68 @@ from .const import (
     API_CONFIG_CHLORINATOR,
     SUPER_CHLOR
 )
+
+class FlowDetectedSensor(PoolEquipmentEntity, BinarySensorEntity):
+    """The current freeze protection status for the control panel"""
+
+    def __init__(self, coordinator: NjsPCHAdata, chem_controller) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator = coordinator, equipment_class=PoolEquipmentClass.CHEM_CONTROLLER, data=chem_controller)
+        if "flowDetected" in chem_controller:
+            self._value = chem_controller["flowDetected"]
+            self._available = True
+        else:
+            self._value = None
+            self._available = False
+
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if self.coordinator.data["event"] == EVENT_CHEM_CONTROLLER:
+            if "flowDetected" in self.coordinator.data:
+                self._available = True
+                self._value = self.coordinator.data["flowDetected"]
+            else:
+                self._available = False
+                self._value = None
+            self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self) -> bool:
+        return False
+
+    @property
+    def available(self) -> bool:
+        return self._available
+
+    @property
+    def name(self) -> str | None:
+        """Name of the sensor"""
+        return "Flow Detected"
+
+    @property
+    def unique_id(self) -> str | None:
+        """ID of the sensor"""
+        return f"{self.coordinator.controller_id}_{self.equipment_class}_{self.equipment_id}_flow_detected"
+
+    @property
+    def native_value(self) -> bool | None:
+        """Raw value of the sensor"""
+        return self._value
+
+    @property
+    def is_on(self) -> bool:
+        """Return if motion is detected."""
+        return self._value
+
+
+    @property
+    def icon(self) -> str:
+        if self._value is True:
+            return "mdi:waves-arrow-right"
+        return "mdi:wave"
 
 class ChemControllerSetpoint(PoolEquipmentEntity, NumberEntity):
     """Chemistry setpoint for ORP or pH"""
