@@ -294,7 +294,7 @@ class ChemControllerIndex(PoolEquipmentEntity, NumberEntity):
                 return 0
             case "calciumHardness":
                 return 25
-            case "alklalinity":
+            case "alkalinity":
                 return 25
             case "cyanuricAcid":
                 return 0
@@ -307,7 +307,7 @@ class ChemControllerIndex(PoolEquipmentEntity, NumberEntity):
                 return 201
             case "calciumHardness":
                 return 800
-            case "alklalinity":
+            case "alkalinity":
                 return 800
             case "cyanuricAcid":
                 return 201
