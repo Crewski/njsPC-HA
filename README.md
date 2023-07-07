@@ -46,9 +46,12 @@ njsPC-HA communicates with nodejs-PoolController via the native API, the same wa
     - Salt Target
     - Salt Needed
 - pH/Orp
+- Schedules (toggle)
+- Chem Controllers
+- Filters
 
-## Not Supported
-- ?????
+# EVENT BUS
+If there is something in nodejs-PoolController that isn't in njsPC-HA, you can maninpulate the data yourself.  All incoming data is sent to the Home Assistant event bus under the event `njspc-ha_event`.  You can subscribe and view these events in the `EVENTS` tab in `Developer Tools`.  The event topic is found in `data.evt` and the data is `data.data`.  These are the same messages that Dashpanel receives which you can view them by using the developer console on your browser.  If you find something you think should be added to this integration, just let us know.
 
 # Home Assistant
 ![Home Assistant](/images/lovelace.png)
