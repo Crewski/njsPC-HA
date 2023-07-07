@@ -132,66 +132,79 @@ class NjsPCHAdata(DataUpdateCoordinator):
         async def handle_temps(data):
             data["event"] = EVENT_TEMPS
             self.async_set_updated_data(data)
+            self.send_to_bus(data)
 
         @self.sio.on("pump")
         async def handle_pump(data):
             data["event"] = EVENT_PUMP
             self.async_set_updated_data(data)
+            self.send_to_bus(data)
 
         @self.sio.on("circuit")
         async def handle_circuit(data):
             data["event"] = EVENT_CIRCUIT
             self.async_set_updated_data(data)
+            self.send_to_bus(data)
 
         @self.sio.on("chlorinator")
         async def handle_chlorinator(data):
             data["event"] = EVENT_CHLORINATOR
             self.async_set_updated_data(data)
+            self.send_to_bus(data)
 
         @self.sio.on("chemController")
         async def handle_chem_controller(data):
             data["event"] = EVENT_CHEM_CONTROLLER
             self.async_set_updated_data(data)
+            self.send_to_bus(data)
 
         @self.sio.on("body")
         async def handle_body(data):
             data["event"] = EVENT_BODY
             self.async_set_updated_data(data)
+            self.send_to_bus(data)
 
         @self.sio.on("lightGroup")
         async def handle_lightgroup(data):
             data["event"] = EVENT_LIGHTGROUP
             self.async_set_updated_data(data)
+            self.send_to_bus(data)
 
         @self.sio.on("circuitGroup")
         async def handle_circuitgroup(data):
             data["event"] = EVENT_CIRCUITGROUP
             self.async_set_updated_data(data)
+            self.send_to_bus(data)
 
         @self.sio.on("feature")
         async def handle_feature(data):
             data["event"] = EVENT_FEATURE
             self.async_set_updated_data(data)
+            self.send_to_bus(data)
 
         @self.sio.on("controller")
         async def handle_controller(data):
             data["event"] = EVENT_CONTROLLER
             self.async_set_updated_data(data)
+            self.send_to_bus(data)
 
         @self.sio.on("filter")
         async def handle_filter(data):
             data["event"] = EVENT_FILTER
             self.async_set_updated_data(data)
+            self.send_to_bus(data)
 
         @self.sio.on("virtualCircuit")
         async def handle_virtual_circuit(data):
             data["event"] = EVENT_VIRTUAL_CIRCUIT
             self.async_set_updated_data(data)
+            self.send_to_bus(data)
 
         @self.sio.on("schedule")
         async def handle_schedule(data):
             data["event"] = EVENT_SCHEDULE
             self.async_set_updated_data(data)
+            self.send_to_bus(data)
 
         @self.sio.event
         async def connect():
@@ -219,6 +232,11 @@ class NjsPCHAdata(DataUpdateCoordinator):
     async def sio_close(self):
         """Close the connection to njsPC"""
         await self.sio.disconnect()
+
+    def send_to_bus(self, data):
+        """Send incoming messages to HA event bus"""
+        bus_data = {"evt": data["event"], "data": data}
+        self.hass.bus.async_fire("njspc-ha_event", bus_data)
 
 
 class NjsPCHAapi:
