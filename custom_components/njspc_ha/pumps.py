@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 from collections.abc import Mapping
+import math
 
 from homeassistant.components.sensor import (
     SensorEntity,
@@ -40,24 +41,45 @@ class PumpProgramSensor(PoolEquipmentEntity, SensorEntity):
             data=pump,
         )
         self._value = None
+        self._relay = None
+        self._command = None
+        self._pump_type = pump["type"]["name"]
+
+        if "relay" in pump:
+            self._relay = pump["relay"]
         if "command" in pump:
-            self._value = pump["command"]
+            self._command = pump["command"]
+        self.get_program()
         self._available = True
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_program"
+
+    def get_program(self) -> None:
+        """Get the program value from data"""
+        if self._pump_type == 'sf' and self._relay > 0:
+            self._value = f"Program #{int(math.log2(self._relay)) + 1}"
+        elif self._pump_type == 'hwrly' and self._command > 0:
+            self._value = f'Program #{self._command}'
+        else:
+            self._value = "Off"
+
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         if (
             self.coordinator.data["event"] == EVENT_PUMP
             and self.coordinator.data["id"] == self.equipment_id
-            and "command" in self.coordinator.data
+            and ("command" in self.coordinator.data or "relay" in self.coordinator.data)
         ):
             if "command" in self.coordinator.data:
                 self._available = True
-                self._value = f'Program #{self.coordinator.data["command"]}'
-            else:
+                self._command = self.coordinator.data["command"]
+            if "relay" in self.coordinator.data:
+                self._available = True
+                self._relay = self.coordinator.data["relay"]
+            if "command" not in self.coordinator.data and "relay" not in self.coordinator.data:
                 self._available = False
                 self._value = None
+            self.get_program()
             self.async_write_ha_state()
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
