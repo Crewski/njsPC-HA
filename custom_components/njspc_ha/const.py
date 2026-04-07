@@ -9,6 +9,7 @@ MANUFACTURER = "nodejs-PoolController"
 # API ENDPOINTS
 API_STATE_ALL = "state/all"
 API_CIRCUIT_SETSTATE = "state/circuit/setState"
+API_CIRCUIT_SETDIMMERLEVEL = "state/circuit/setDimmerLevel"
 API_CIRCUITGROUP_SETSTATE = "state/circuitGroup/setState"
 API_LIGHTGROUP_SETSTATE = "state/lightGroup/setState"
 API_FEATURE_SETSTATE = "state/feature/setState"
