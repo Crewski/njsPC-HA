@@ -108,6 +108,368 @@ class FlowDetectedSensor(PoolEquipmentEntity, BinarySensorEntity):
             return "mdi:waves-arrow-right"
         return "mdi:wave"
 
+class WarningSensor(PoolEquipmentEntity, BinarySensorEntity):
+    """The current freeze protection status for the control panel"""
+
+    def __init__(self, coordinator: NjsPCHAdata, chem_controller) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator = coordinator, equipment_class=PoolEquipmentClass.CHEM_CONTROLLER, data=chem_controller)
+        self._state_attributes: dict[str, Any] = dict([])
+        if "warnings" in chem_controller and chem_controller["warnings"]:
+            warn = chem_controller["warnings"]
+
+            self._available = True
+
+            self._state_attributes["chlorinator_comm_err"] = warn["chlorinatorCommError"]["val"]
+            self._state_attributes["chlorinator_comm_err_desc"] = warn["chlorinatorCommError"]["desc"]
+            self._state_attributes["invalid_setup"] = warn["invalidSetup"]["val"]
+            self._state_attributes["invalid_setup_desc"] = warn["invalidSetup"]["desc"]
+            self._state_attributes["orp_daily_limit_reached"] = warn["orpDailyLimitReached"]["val"]
+            self._state_attributes["orp_daily_limit_reached_desc"] = warn["orpDailyLimitReached"]["desc"]
+            self._state_attributes["ph_daily_limit_reached"] = warn["pHDailyLimitReached"]["val"]
+            self._state_attributes["ph_daily_limit_reached_desc"] = warn["pHDailyLimitReached"]["desc"]
+            self._state_attributes["ph_lockout"] = warn["pHLockout"]["val"]
+            self._state_attributes["ph_lockout_desc"] = warn["pHLockout"]["desc"]
+            self._state_attributes["water_chemistry"] = warn["waterChemistry"]["val"]
+            self._state_attributes["water_chemistry_desc"] = warn["waterChemistry"]["desc"]
+
+            self._value = self._state_attributes["chlorinator_comm_err"] + self._state_attributes["invalid_setup"] + self._state_attributes["orp_daily_limit_reached"] + self._state_attributes["ph_daily_limit_reached"]  + self._state_attributes["ph_lockout"] + self._state_attributes["water_chemistry"]
+
+        else:
+            self._value = None
+            self._available = False
+            self._state_attributes["chlorinator_comm_err"] = 0
+            self._state_attributes["chlorinator_comm_err_desc"] = ""
+            self._state_attributes["invalid_setup"] = 0
+            self._state_attributes["invalid_setup_desc"] = ""
+            self._state_attributes["orp_daily_limit_reached"] = 0
+            self._state_attributes["orp_daily_limit_reached_desc"] = ""
+            self._state_attributes["ph_daily_limit_reached"] = 0
+            self._state_attributes["ph_daily_limit_reached_desc"] = ""
+            self._state_attributes["ph_lockout"] = 0
+            self._state_attributes["ph_lockout_desc"] = ""
+            self._state_attributes["water_chemistry"] = 0
+            self._state_attributes["water_chemistry_desc"] = ""
+
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if self.coordinator.data["event"] == EVENT_CHEM_CONTROLLER:
+            if "warnings" in self.coordinator.data:
+                self._available = True
+                warn = self.coordinator.data["warnings"]
+
+                self._state_attributes["chlorinator_comm_err"] = warn["chlorinatorCommError"]["val"]
+                self._state_attributes["chlorinator_comm_err_desc"] = warn["chlorinatorCommError"]["desc"]
+                self._state_attributes["invalid_setup"] = warn["invalidSetup"]["val"]
+                self._state_attributes["invalid_setup_desc"] = warn["invalidSetup"]["desc"]
+                self._state_attributes["orp_daily_limit_reached"] = warn["orpDailyLimitReached"]["val"]
+                self._state_attributes["orp_daily_limit_reached_desc"] = warn["orpDailyLimitReached"]["desc"]
+                self._state_attributes["ph_daily_limit_reached"] = warn["pHDailyLimitReached"]["val"]
+                self._state_attributes["ph_daily_limit_reached_desc"] = warn["pHDailyLimitReached"]["desc"]
+                self._state_attributes["ph_lockout"] = warn["pHLockout"]["val"]
+                self._state_attributes["ph_lockout_desc"] = warn["pHLockout"]["desc"]
+                self._state_attributes["water_chemistry"] = warn["waterChemistry"]["val"]
+                self._state_attributes["water_chemistry_desc"] = warn["waterChemistry"]["desc"]
+
+                self._value = self._state_attributes["chlorinator_comm_err"] + self._state_attributes["invalid_setup"] + self._state_attributes["orp_daily_limit_reached"] + self._state_attributes["ph_daily_limit_reached"]  + self._state_attributes["ph_lockout"] + self._state_attributes["water_chemistry"]
+
+            else:
+                self._value = None
+                self._available = False
+                self._state_attributes["chlorinator_comm_err"] = 0
+                self._state_attributes["chlorinator_comm_err_desc"] = ""
+                self._state_attributes["invalid_setup"] = 0
+                self._state_attributes["invalid_setup_desc"] = ""
+                self._state_attributes["orp_daily_limit_reached"] = 0
+                self._state_attributes["orp_daily_limit_reached_desc"] = ""
+                self._state_attributes["ph_daily_limit_reached"] = 0
+                self._state_attributes["ph_daily_limit_reached_desc"] = ""
+                self._state_attributes["ph_lockout"] = 0
+                self._state_attributes["ph_lockout_desc"] = ""
+                self._state_attributes["water_chemistry"] = 0
+                self._state_attributes["water_chemistry_desc"] = ""
+
+            self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self) -> bool:
+        return False
+
+    @property
+    def available(self) -> bool:
+        return self._available
+
+    @property
+    def name(self) -> str | None:
+        """Name of the sensor"""
+        return "Chlorinator Warnings"
+
+    @property
+    def unique_id(self) -> str | None:
+        """ID of the sensor"""
+        return f"{self.coordinator.controller_id}_{self.equipment_class}_{self.equipment_id}_warnings"
+
+    @property
+    def native_value(self) -> bool | None:
+        """Raw value of the sensor"""
+        return self._value
+
+    @property
+    def is_on(self) -> bool:
+        """Return if motion is detected."""
+        return self._value
+
+
+    @property
+    def icon(self) -> str:
+        if self._value is True:
+            return "mdi:waves-arrow-right"
+        return "mdi:wave"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, str]:
+        """Return the state attributes."""
+        return self._state_attributes
+
+class AlarmSensor(PoolEquipmentEntity, BinarySensorEntity):
+    """The current freeze protection status for the control panel"""
+
+    def __init__(self, coordinator: NjsPCHAdata, chem_controller) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator = coordinator, equipment_class=PoolEquipmentClass.CHEM_CONTROLLER, data=chem_controller)
+        self._state_attributes: dict[str, Any] = dict([])
+        if "alarms" in chem_controller and chem_controller["alarms"]:
+            alarms = chem_controller["alarms"]
+
+            self._available = True
+
+            self._state_attributes["body_fault"] = alarms["bodyFault"]["val"]
+            self._state_attributes["body_fault_desc"] = alarms["bodyFault"]["desc"]
+            self._state_attributes["chlor_fault"] = alarms["chlorFault"]["val"]
+            self._state_attributes["chlor_fault_desc"] = alarms["chlorFault"]["desc"]
+            self._state_attributes["comms"] = alarms["comms"]["val"]
+            self._state_attributes["comms_desc"] = alarms["comms"]["desc"]
+            self._state_attributes["flow"] = alarms["flow"]["val"]
+            self._state_attributes["flow_desc"] = alarms["flow"]["desc"]
+            self._state_attributes["flow_sensor_fault"] = alarms["flowSensorFault"]["val"]
+            self._state_attributes["flow_sensor_fault_desc"] = alarms["flowSensorFault"]["desc"]
+            self._state_attributes["freeze_protect"] = alarms["freezeProtect"]["val"]
+            self._state_attributes["freeze_protect_desc"] = alarms["freezeProtect"]["desc"]
+
+            self._state_attributes["orp"] = alarms["orp"]["val"]
+            self._state_attributes["orp_desc"] = alarms["orp"]["desc"]
+            self._state_attributes["orp_probe_fault"] = alarms["orpProbeFault"]["val"]
+            self._state_attributes["orp_probe_fault_desc"] = alarms["orpProbeFault"]["desc"]
+            self._state_attributes["orp_pump_fault"] = alarms["orpPumpFault"]["val"]
+            self._state_attributes["orp_pump_fault_desc"] = alarms["orpPumpFault"]["desc"]
+            self._state_attributes["orp_tank"] = alarms["orpTank"]["val"]
+            self._state_attributes["orp_tank_desc"] = alarms["orpTank"]["desc"]
+
+            self._state_attributes["ph"] = alarms["pH"]["val"]
+            self._state_attributes["ph_desc"] = alarms["pH"]["desc"]
+            self._state_attributes["ph_probe_fault"] = alarms["pHProbeFault"]["val"]
+            self._state_attributes["ph_probe_fault_desc"] = alarms["pHProbeFault"]["desc"]
+            self._state_attributes["ph_pump_fault"] = alarms["pHPumpFault"]["val"]
+            self._state_attributes["ph_pump_fault_desc"] = alarms["pHPumpFault"]["desc"]
+            self._state_attributes["ph_tank"] = alarms["pHTank"]["val"]
+            self._state_attributes["ph_tank_desc"] = alarms["pHTank"]["desc"]
+
+            self._state_attributes["probe_fault"] = alarms["probeFault"]["val"]
+            self._state_attributes["probe_fault_desc"] = alarms["probeFault"]["desc"]
+
+            self._value = self._state_attributes["body_fault"] + \
+                self._state_attributes["chlor_fault"] + \
+                self._state_attributes["comms"] + \
+                self._state_attributes["flow"]  + \
+                self._state_attributes["flow_sensor_fault"] + \
+                self._state_attributes["freeze_protect"] + \
+                self._state_attributes["orp"] + \
+                self._state_attributes["orp_probe_fault"] + \
+                self._state_attributes["orp_pump_fault"]  + \
+                self._state_attributes["orp_tank"] + \
+                self._state_attributes["ph"] + \
+                self._state_attributes["ph_probe_fault"] + \
+                self._state_attributes["ph_pump_fault"]  + \
+                self._state_attributes["ph_tank"] + \
+                self._state_attributes["probe_fault"]
+        else:
+            self._value = None
+            self._available = False
+            self._state_attributes["body_fault"] = 0
+            self._state_attributes["body_fault_desc"] = ""
+            self._state_attributes["chlor_fault"] = 0
+            self._state_attributes["chlor_fault_desc"] = ""
+            self._state_attributes["comms"] = 0
+            self._state_attributes["comms_desc"] = ""
+            self._state_attributes["flow"] = 0
+            self._state_attributes["flow_desc"] = ""
+            self._state_attributes["flow_sensor_fault"] = 0
+            self._state_attributes["flow_sensor_fault_desc"] = ""
+            self._state_attributes["freeze_protect"] = 0
+            self._state_attributes["freeze_protect_desc"] = ""
+
+            self._state_attributes["orp"] = 0
+            self._state_attributes["orp_desc"] = ""
+            self._state_attributes["orp_probe_fault"] = 0
+            self._state_attributes["orp_probe_fault_desc"] = ""
+            self._state_attributes["orp_pump_fault"] = 0
+            self._state_attributes["orp_pump_fault_desc"] = ""
+            self._state_attributes["orp_tank"] = 0
+            self._state_attributes["orp_tank_desc"] = ""
+
+            self._state_attributes["ph"] = 0
+            self._state_attributes["ph_desc"] = ""
+            self._state_attributes["ph_probe_fault"] = 0
+            self._state_attributes["ph_probe_fault_desc"] = ""
+            self._state_attributes["ph_pump_fault"] = 0
+            self._state_attributes["ph_pump_fault_desc"] = ""
+            self._state_attributes["ph_tank"] = 0
+            self._state_attributes["ph_tank_desc"] = ""
+
+            self._state_attributes["probe_fault"] = 0
+            self._state_attributes["probe_fault_desc"] = ""
+
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        if self.coordinator.data["event"] == EVENT_CHEM_CONTROLLER:
+            if "alarms" in self.coordinator.data:
+                self._available = True
+                alarms = self.coordinator.data["alarms"]
+
+                self._state_attributes["body_fault"] = alarms["bodyFault"]["val"]
+                self._state_attributes["body_fault_desc"] = alarms["bodyFault"]["desc"]
+                self._state_attributes["chlor_fault"] = alarms["chlorFault"]["val"]
+                self._state_attributes["chlor_fault_desc"] = alarms["chlorFault"]["desc"]
+                self._state_attributes["comms"] = alarms["comms"]["val"]
+                self._state_attributes["comms_desc"] = alarms["comms"]["desc"]
+                self._state_attributes["flow"] = alarms["flow"]["val"]
+                self._state_attributes["flow_desc"] = alarms["flow"]["desc"]
+                self._state_attributes["flow_sensor_fault"] = alarms["flowSensorFault"]["val"]
+                self._state_attributes["flow_sensor_fault_desc"] = alarms["flowSensorFault"]["desc"]
+                self._state_attributes["freeze_protect"] = alarms["freezeProtect"]["val"]
+                self._state_attributes["freeze_protect_desc"] = alarms["freezeProtect"]["desc"]
+
+                self._state_attributes["orp"] = alarms["orp"]["val"]
+                self._state_attributes["orp_desc"] = alarms["orp"]["desc"]
+                self._state_attributes["orp_probe_fault"] = alarms["orpProbeFault"]["val"]
+                self._state_attributes["orp_probe_fault_desc"] = alarms["orpProbeFault"]["desc"]
+                self._state_attributes["orp_pump_fault"] = alarms["orpPumpFault"]["val"]
+                self._state_attributes["orp_pump_fault_desc"] = alarms["orpPumpFault"]["desc"]
+                self._state_attributes["orp_tank"] = alarms["orpTank"]["val"]
+                self._state_attributes["orp_tank_desc"] = alarms["orpTank"]["desc"]
+
+                self._state_attributes["ph"] = alarms["pH"]["val"]
+                self._state_attributes["ph_desc"] = alarms["pH"]["desc"]
+                self._state_attributes["ph_probe_fault"] = alarms["pHProbeFault"]["val"]
+                self._state_attributes["ph_probe_fault_desc"] = alarms["pHProbeFault"]["desc"]
+                self._state_attributes["ph_pump_fault"] = alarms["pHPumpFault"]["val"]
+                self._state_attributes["ph_pump_fault_desc"] = alarms["pHPumpFault"]["desc"]
+                self._state_attributes["ph_tank"] = alarms["pHTank"]["val"]
+                self._state_attributes["ph_tank_desc"] = alarms["pHTank"]["desc"]
+
+                self._state_attributes["probe_fault"] = alarms["probeFault"]["val"]
+                self._state_attributes["probe_fault_desc"] = alarms["probeFault"]["desc"]
+
+                self._value = self._state_attributes["body_fault"] + \
+                    self._state_attributes["chlor_fault"] + \
+                    self._state_attributes["comms"] + \
+                    self._state_attributes["flow"]  + \
+                    self._state_attributes["flow_sensor_fault"] + \
+                    self._state_attributes["freeze_protect"] + \
+                    self._state_attributes["orp"] + \
+                    self._state_attributes["orp_probe_fault"] + \
+                    self._state_attributes["orp_pump_fault"]  + \
+                    self._state_attributes["orp_tank"] + \
+                    self._state_attributes["ph"] + \
+                    self._state_attributes["ph_probe_fault"] + \
+                    self._state_attributes["ph_pump_fault"]  + \
+                    self._state_attributes["ph_tank"] + \
+                    self._state_attributes["probe_fault"]
+            else:
+                self._value = None
+                self._available = False
+                self._state_attributes["body_fault"] = 0
+                self._state_attributes["body_fault_desc"] = ""
+                self._state_attributes["chlor_fault"] = 0
+                self._state_attributes["chlor_fault_desc"] = ""
+                self._state_attributes["comms"] = 0
+                self._state_attributes["comms_desc"] = ""
+                self._state_attributes["flow"] = 0
+                self._state_attributes["flow_desc"] = ""
+                self._state_attributes["flow_sensor_fault"] = 0
+                self._state_attributes["flow_sensor_fault_desc"] = ""
+                self._state_attributes["freeze_protect"] = 0
+                self._state_attributes["freeze_protect_desc"] = ""
+
+                self._state_attributes["orp"] = 0
+                self._state_attributes["orp_desc"] = ""
+                self._state_attributes["orp_probe_fault"] = 0
+                self._state_attributes["orp_probe_fault_desc"] = ""
+                self._state_attributes["orp_pump_fault"] = 0
+                self._state_attributes["orp_pump_fault_desc"] = ""
+                self._state_attributes["orp_tank"] = 0
+                self._state_attributes["orp_tank_desc"] = ""
+
+                self._state_attributes["ph"] = 0
+                self._state_attributes["ph_desc"] = ""
+                self._state_attributes["ph_probe_fault"] = 0
+                self._state_attributes["ph_probe_fault_desc"] = ""
+                self._state_attributes["ph_pump_fault"] = 0
+                self._state_attributes["ph_pump_fault_desc"] = ""
+                self._state_attributes["ph_tank"] = 0
+                self._state_attributes["ph_tank_desc"] = ""
+
+                self._state_attributes["probe_fault"] = 0
+                self._state_attributes["probe_fault_desc"] = ""
+
+            self.async_write_ha_state()
+        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self.async_write_ha_state()
+
+    @property
+    def should_poll(self) -> bool:
+        return False
+
+    @property
+    def available(self) -> bool:
+        return self._available
+
+    @property
+    def name(self) -> str | None:
+        """Name of the sensor"""
+        return "Chlorinator Alarms"
+
+    @property
+    def unique_id(self) -> str | None:
+        """ID of the sensor"""
+        return f"{self.coordinator.controller_id}_{self.equipment_class}_{self.equipment_id}_alarms"
+
+    @property
+    def native_value(self) -> bool | None:
+        """Raw value of the sensor"""
+        return self._value
+
+    @property
+    def is_on(self) -> bool:
+        """Return if motion is detected."""
+        return self._value
+
+
+    @property
+    def icon(self) -> str:
+        if self._value is True:
+            return "mdi:waves-arrow-right"
+        return "mdi:wave"
+
+    @property
+    def extra_state_attributes(self) -> dict[str, str]:
+        """Return the state attributes."""
+        return self._state_attributes
+
 class ChemControllerSetpoint(PoolEquipmentEntity, NumberEntity):
     """Chemistry setpoint for ORP or pH"""
     def __init__(
@@ -339,6 +701,7 @@ class ChemistryDosingStatus(PoolEquipmentEntity, SensorEntity):
             ])
             self._state_attributes["dose_time"] = self.format_duration(chemical["doseTime"])
             self._state_attributes["dose_volume"] = chemical["doseVolume"]
+            self._state_attributes["volume_dosed"] = chemical["volumeDosed"]
             self._state_attributes["dose_volume_remaining"] = chemical[
                 "dosingVolumeRemaining"
             ]
@@ -366,6 +729,7 @@ class ChemistryDosingStatus(PoolEquipmentEntity, SensorEntity):
                 ])
                 self._state_attributes["dose_time"] = self.format_duration(chemical["doseTime"])
                 self._state_attributes["dose_volume"] = chemical["doseVolume"]
+                self._state_attributes["volume_dosed"] = chemical["volumeDosed"]
                 self._state_attributes["dose_volume_remaining"] = chemical[
                     "dosingVolumeRemaining"
                 ]

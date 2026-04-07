@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 
 
 from .controller import FreezeProtectionSensor
-from .chemistry import FlowDetectedSensor
+from .chemistry import FlowDetectedSensor, WarningSensor, AlarmSensor
 from .pumps import PumpOnSensor
 from .bodies import FilterOnSensor, BodyCoveredSensor
 from .features import VirtualCircuit
@@ -66,6 +66,23 @@ async def async_setup_entry(
                     chem_controller=chem_controller
                 )
             )
-
+            if (
+                "warnings" in chem_controller
+            ):
+                new_devices.append(
+                    WarningSensor(
+                        coordinator=coordinator,
+                        chem_controller=chem_controller
+                    )
+                )
+            if (
+                "alarms" in chem_controller
+            ):
+                new_devices.append(
+                    AlarmSensor(
+                        coordinator=coordinator,
+                        chem_controller=chem_controller
+                    )
+                )
     if new_devices:
         async_add_entities(new_devices)
