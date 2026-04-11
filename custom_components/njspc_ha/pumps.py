@@ -12,7 +12,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import UnitOfPower
 
-from .entity import PoolEquipmentEntity, NjsPCHAdata
+from .entity import PoolEquipmentEntity, ThrottledSensorMixin, NjsPCHAdata
 
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
@@ -27,6 +27,9 @@ from .const import (
     FLOW,
     MIN_FLOW,
     MAX_FLOW,
+    THROTTLE_PUMP_SPEED_DELTA,
+    THROTTLE_PUMP_POWER_DELTA,
+    THROTTLE_PUMP_FLOW_DELTA,
     PoolEquipmentClass,
 )
 
@@ -114,8 +117,10 @@ class PumpProgramSensor(PoolEquipmentEntity, SensorEntity):
 
 
 
-class PumpSpeedSensor(PoolEquipmentEntity, SensorEntity):
+class PumpSpeedSensor(ThrottledSensorMixin, PoolEquipmentEntity, SensorEntity):
     """RPM Pump Sensor for njsPC-HA"""
+
+    _throttle_delta = THROTTLE_PUMP_SPEED_DELTA
 
     def __init__(self, coordinator: NjsPCHAdata, pump: Any) -> None:
         """Initialize the sensor."""
@@ -132,26 +137,25 @@ class PumpSpeedSensor(PoolEquipmentEntity, SensorEntity):
         if "minSpeed" in pump:
             self._state_attributes["min_speed"] = pump["minSpeed"]
         if "maxSpeed" in pump:
-            self._state_attributes["max_speed"] = (pump["maxSpeed"],)
+            self._state_attributes["max_speed"] = pump["maxSpeed"]
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_speed"
+        self._init_throttle()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        if self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self._immediate_update()
+            return
+
         if (
             self.coordinator.data["event"] == EVENT_PUMP
             and self.coordinator.data["id"] == self.equipment_id
             and RPM in self.coordinator.data
         ):
-            if RPM in self.coordinator.data:
-                self._available = True
-                self._value = self.coordinator.data[RPM]
-            else:
-                self._available = False
-                self._value = None
-            self.async_write_ha_state()
-        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
-            self._available = self.coordinator.data["available"]
-            self.async_write_ha_state()
+            self._available = True
+            self._value = self.coordinator.data[RPM]
+            self._throttled_update(self._value)
 
     @property
     def should_poll(self) -> bool:
@@ -196,8 +200,10 @@ class PumpSpeedSensor(PoolEquipmentEntity, SensorEntity):
         return self._state_attributes
 
 
-class PumpPowerSensor(PoolEquipmentEntity, SensorEntity):
+class PumpPowerSensor(ThrottledSensorMixin, PoolEquipmentEntity, SensorEntity):
     """Watts Pump Sensor for njsPC-HA"""
+
+    _throttle_delta = THROTTLE_PUMP_POWER_DELTA
 
     def __init__(self, coordinator, pump):
         """Initialize the sensor."""
@@ -213,6 +219,7 @@ class PumpPowerSensor(PoolEquipmentEntity, SensorEntity):
         # Below makes sure we have a name that makes sense for the entity.
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_power"
+        self._init_throttle()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -220,13 +227,13 @@ class PumpPowerSensor(PoolEquipmentEntity, SensorEntity):
             self.coordinator.data["event"] == EVENT_PUMP
             and self.coordinator.data["id"] == self.equipment_id
             and WATTS
-            in self.coordinator.data  # make sure the data we are looking for is in the coordinator data
+            in self.coordinator.data
         ):
             self._value = self.coordinator.data[WATTS]
-            self.async_write_ha_state()
+            self._throttled_update(self._value)
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
-            self.async_write_ha_state()
+            self._immediate_update()
 
     @property
     def should_poll(self) -> bool:
@@ -267,8 +274,10 @@ class PumpPowerSensor(PoolEquipmentEntity, SensorEntity):
         return UnitOfPower.WATT
 
 
-class PumpFlowSensor(PoolEquipmentEntity, SensorEntity):
+class PumpFlowSensor(ThrottledSensorMixin, PoolEquipmentEntity, SensorEntity):
     """Flow Pump Sensor for njsPC-HA"""
+
+    _throttle_delta = THROTTLE_PUMP_FLOW_DELTA
 
     def __init__(self, coordinator: NjsPCHAdata, pump: Any) -> None:
         """Initialize the sensor."""
@@ -289,6 +298,7 @@ class PumpFlowSensor(PoolEquipmentEntity, SensorEntity):
             # Below makes sure we have a name that makes sense for the entity.
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_flow"
+        self._init_throttle()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -296,13 +306,13 @@ class PumpFlowSensor(PoolEquipmentEntity, SensorEntity):
             self.coordinator.data["event"] == EVENT_PUMP
             and self.coordinator.data["id"] == self.equipment_id
             and FLOW
-            in self.coordinator.data  # make sure the data we are looking for is in the coordinator data
+            in self.coordinator.data
         ):
             self._value = self.coordinator.data[FLOW]
-            self.async_write_ha_state()
+            self._throttled_update(self._value)
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
-            self.async_write_ha_state()
+            self._immediate_update()
 
     @property
     def should_poll(self) -> bool:
@@ -348,7 +358,7 @@ class PumpFlowSensor(PoolEquipmentEntity, SensorEntity):
         return self._state_attributes
 
 
-class PumpOnSensor(PoolEquipmentEntity, BinarySensorEntity):
+class PumpOnSensor(ThrottledSensorMixin, PoolEquipmentEntity, BinarySensorEntity):
     """The current running state for a pump"""
 
     def __init__(self, coordinator: NjsPCHAdata, pump: Any) -> None:
@@ -361,13 +371,14 @@ class PumpOnSensor(PoolEquipmentEntity, BinarySensorEntity):
         self._value = None
         if "relay" in pump:
             self._value = pump["relay"] > 0
-        elif "command" in pump:
-            self._value = pump["command"] == 10
         else:
-            self._value = False
+            # rpm/watts are the most reliable cross-pump-type running indicator.
+            # command==10 is unreliable: Regal Modbus uses command=4 while running.
+            self._value = (pump.get(RPM) or 0) > 0 or (pump.get(WATTS) or 0) > 0
         self._available = True
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_ison"
+        self._init_throttle()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -377,15 +388,17 @@ class PumpOnSensor(PoolEquipmentEntity, BinarySensorEntity):
         ):
             if "relay" in self.coordinator.data:
                 self._value = self.coordinator.data["relay"] > 0
-            elif "command" in self.coordinator.data:
-                self._value = self.coordinator.data["command"] == 10
+            elif RPM in self.coordinator.data or WATTS in self.coordinator.data:
+                # rpm/watts are the most reliable cross-pump-type running indicator.
+                # command==10 is unreliable: Regal Modbus uses command=4 while running.
+                self._value = (self.coordinator.data.get(RPM) or 0) > 0 or (self.coordinator.data.get(WATTS) or 0) > 0
             else:
                 self._value = False
             self._available = True
-            self.async_write_ha_state()
+            self._throttled_update(self._value)
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
-            self.async_write_ha_state()
+            self._immediate_update()
 
     @property
     def should_poll(self) -> bool:
