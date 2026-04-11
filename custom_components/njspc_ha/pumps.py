@@ -4,7 +4,6 @@ from __future__ import annotations
 from typing import Any
 from collections.abc import Mapping
 import math
-import time
 
 from homeassistant.components.sensor import (
     SensorEntity,
@@ -12,10 +11,8 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
 )
 from homeassistant.const import UnitOfPower
-from homeassistant.core import CALLBACK_TYPE, callback
-from homeassistant.helpers.event import async_call_later
 
-from .entity import PoolEquipmentEntity, NjsPCHAdata
+from .entity import PoolEquipmentEntity, ThrottledSensorMixin, NjsPCHAdata
 
 from homeassistant.components.binary_sensor import (
     BinarySensorEntity,
@@ -30,8 +27,9 @@ from .const import (
     FLOW,
     MIN_FLOW,
     MAX_FLOW,
-    PUMP_SPEED_MIN_INTERVAL,
-    PUMP_SPEED_MIN_DELTA,
+    THROTTLE_PUMP_SPEED_DELTA,
+    THROTTLE_PUMP_POWER_DELTA,
+    THROTTLE_PUMP_FLOW_DELTA,
     PoolEquipmentClass,
 )
 
@@ -119,8 +117,10 @@ class PumpProgramSensor(PoolEquipmentEntity, SensorEntity):
 
 
 
-class PumpSpeedSensor(PoolEquipmentEntity, SensorEntity):
+class PumpSpeedSensor(ThrottledSensorMixin, PoolEquipmentEntity, SensorEntity):
     """RPM Pump Sensor for njsPC-HA"""
+
+    _throttle_delta = THROTTLE_PUMP_SPEED_DELTA
 
     def __init__(self, coordinator: NjsPCHAdata, pump: Any) -> None:
         """Initialize the sensor."""
@@ -139,18 +139,13 @@ class PumpSpeedSensor(PoolEquipmentEntity, SensorEntity):
         if "maxSpeed" in pump:
             self._state_attributes["max_speed"] = pump["maxSpeed"]
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_speed"
-
-        # Throttle state
-        self._last_published_value: int | None = None
-        self._last_published_time: float = 0.0
-        self._flush_unsub: CALLBACK_TYPE | None = None
+        self._init_throttle()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         if self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
-            self._cancel_flush()
-            self.async_write_ha_state()
+            self._immediate_update()
             return
 
         if (
@@ -160,59 +155,7 @@ class PumpSpeedSensor(PoolEquipmentEntity, SensorEntity):
         ):
             self._available = True
             self._value = self.coordinator.data[RPM]
-            self._maybe_publish()
-
-    def _maybe_publish(self) -> None:
-        """Decide whether to publish now or defer."""
-        now = time.monotonic()
-
-        # First update ever — publish immediately
-        if self._last_published_value is None:
-            self._publish(now)
-            return
-
-        # Meaningful RPM change — publish immediately
-        if abs(self._value - self._last_published_value) >= PUMP_SPEED_MIN_DELTA:
-            self._cancel_flush()
-            self._publish(now)
-            return
-
-        # Within throttle window — schedule a deferred flush
-        elapsed = now - self._last_published_time
-        if elapsed >= PUMP_SPEED_MIN_INTERVAL:
-            self._cancel_flush()
-            self._publish(now)
-            return
-
-        # Schedule flush for the remaining time if not already pending
-        if self._flush_unsub is None:
-            delay = PUMP_SPEED_MIN_INTERVAL - elapsed
-            self._flush_unsub = async_call_later(
-                self.coordinator.hass, delay, self._flush_callback
-            )
-
-    @callback
-    def _flush_callback(self, _now) -> None:
-        """Publish the latest pending value after the throttle window."""
-        self._flush_unsub = None
-        self._publish(time.monotonic())
-
-    def _publish(self, now: float) -> None:
-        """Write state to HA and record publish time."""
-        self._last_published_value = self._value
-        self._last_published_time = now
-        self.async_write_ha_state()
-
-    def _cancel_flush(self) -> None:
-        """Cancel any pending flush timer."""
-        if self._flush_unsub is not None:
-            self._flush_unsub()
-            self._flush_unsub = None
-
-    async def async_will_remove_from_hass(self) -> None:
-        """Clean up pending timers on entity removal."""
-        self._cancel_flush()
-        await super().async_will_remove_from_hass()
+            self._throttled_update(self._value)
 
     @property
     def should_poll(self) -> bool:
@@ -257,8 +200,10 @@ class PumpSpeedSensor(PoolEquipmentEntity, SensorEntity):
         return self._state_attributes
 
 
-class PumpPowerSensor(PoolEquipmentEntity, SensorEntity):
+class PumpPowerSensor(ThrottledSensorMixin, PoolEquipmentEntity, SensorEntity):
     """Watts Pump Sensor for njsPC-HA"""
+
+    _throttle_delta = THROTTLE_PUMP_POWER_DELTA
 
     def __init__(self, coordinator, pump):
         """Initialize the sensor."""
@@ -274,6 +219,7 @@ class PumpPowerSensor(PoolEquipmentEntity, SensorEntity):
         # Below makes sure we have a name that makes sense for the entity.
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_power"
+        self._init_throttle()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -281,13 +227,13 @@ class PumpPowerSensor(PoolEquipmentEntity, SensorEntity):
             self.coordinator.data["event"] == EVENT_PUMP
             and self.coordinator.data["id"] == self.equipment_id
             and WATTS
-            in self.coordinator.data  # make sure the data we are looking for is in the coordinator data
+            in self.coordinator.data
         ):
             self._value = self.coordinator.data[WATTS]
-            self.async_write_ha_state()
+            self._throttled_update(self._value)
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
-            self.async_write_ha_state()
+            self._immediate_update()
 
     @property
     def should_poll(self) -> bool:
@@ -328,8 +274,10 @@ class PumpPowerSensor(PoolEquipmentEntity, SensorEntity):
         return UnitOfPower.WATT
 
 
-class PumpFlowSensor(PoolEquipmentEntity, SensorEntity):
+class PumpFlowSensor(ThrottledSensorMixin, PoolEquipmentEntity, SensorEntity):
     """Flow Pump Sensor for njsPC-HA"""
+
+    _throttle_delta = THROTTLE_PUMP_FLOW_DELTA
 
     def __init__(self, coordinator: NjsPCHAdata, pump: Any) -> None:
         """Initialize the sensor."""
@@ -350,6 +298,7 @@ class PumpFlowSensor(PoolEquipmentEntity, SensorEntity):
             # Below makes sure we have a name that makes sense for the entity.
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_flow"
+        self._init_throttle()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -357,13 +306,13 @@ class PumpFlowSensor(PoolEquipmentEntity, SensorEntity):
             self.coordinator.data["event"] == EVENT_PUMP
             and self.coordinator.data["id"] == self.equipment_id
             and FLOW
-            in self.coordinator.data  # make sure the data we are looking for is in the coordinator data
+            in self.coordinator.data
         ):
             self._value = self.coordinator.data[FLOW]
-            self.async_write_ha_state()
+            self._throttled_update(self._value)
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
-            self.async_write_ha_state()
+            self._immediate_update()
 
     @property
     def should_poll(self) -> bool:
@@ -409,7 +358,7 @@ class PumpFlowSensor(PoolEquipmentEntity, SensorEntity):
         return self._state_attributes
 
 
-class PumpOnSensor(PoolEquipmentEntity, BinarySensorEntity):
+class PumpOnSensor(ThrottledSensorMixin, PoolEquipmentEntity, BinarySensorEntity):
     """The current running state for a pump"""
 
     def __init__(self, coordinator: NjsPCHAdata, pump: Any) -> None:
@@ -429,6 +378,7 @@ class PumpOnSensor(PoolEquipmentEntity, BinarySensorEntity):
         self._available = True
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_ison"
+        self._init_throttle()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -443,10 +393,10 @@ class PumpOnSensor(PoolEquipmentEntity, BinarySensorEntity):
             else:
                 self._value = False
             self._available = True
-            self.async_write_ha_state()
+            self._throttled_update(self._value)
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
-            self.async_write_ha_state()
+            self._immediate_update()
 
     @property
     def should_poll(self) -> bool:

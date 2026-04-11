@@ -30,7 +30,7 @@ from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
 )
 
-from .entity import PoolEquipmentEntity
+from .entity import PoolEquipmentEntity, ThrottledSensorMixin
 from .__init__ import NjsPCHAdata
 from .const import (
     PoolEquipmentClass,
@@ -41,6 +41,9 @@ from .const import (
     API_CIRCUIT_SETSTATE,
     API_TEMPERATURE_SETPOINT,
     API_SET_HEATMODE,
+    THROTTLE_TEMP_DELTA,
+    THROTTLE_FILTER_PRESSURE_DELTA,
+    THROTTLE_FILTER_CLEAN_DELTA,
 )
 
 NJSPC_HVAC_ACTION_TO_HASS = {
@@ -57,7 +60,7 @@ NJSPC_HVAC_ACTION_TO_HASS = {
 }
 
 
-class FilterOnSensor(PoolEquipmentEntity, BinarySensorEntity):
+class FilterOnSensor(ThrottledSensorMixin, PoolEquipmentEntity, BinarySensorEntity):
     """The current running state for a pump"""
 
     def __init__(self, coordinator: NjsPCHAdata, pool_filter: Any) -> None:
@@ -71,6 +74,7 @@ class FilterOnSensor(PoolEquipmentEntity, BinarySensorEntity):
         if "isOn" in pool_filter:
             self._value = pool_filter["isOn"]
         self._available = True
+        self._init_throttle()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -80,10 +84,10 @@ class FilterOnSensor(PoolEquipmentEntity, BinarySensorEntity):
         ):
             if "isOn" in self.coordinator.data:
                 self._value = self.coordinator.data["isOn"]
-            self.async_write_ha_state()
+            self._throttled_update(self._value)
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
-            self.async_write_ha_state()
+            self._immediate_update()
 
     @property
     def should_poll(self) -> bool:
@@ -120,8 +124,10 @@ class FilterOnSensor(PoolEquipmentEntity, BinarySensorEntity):
         return "mdi:filter-off"
 
 
-class FilterCleanSensor(PoolEquipmentEntity, SensorEntity):
+class FilterCleanSensor(ThrottledSensorMixin, PoolEquipmentEntity, SensorEntity):
     """Sensor for filter clean percentage"""
+
+    _throttle_delta = THROTTLE_FILTER_CLEAN_DELTA
 
     def __init__(self, coordinator: NjsPCHAdata, pool_filter: Any) -> None:
         """Initialize the sensor."""
@@ -134,6 +140,7 @@ class FilterCleanSensor(PoolEquipmentEntity, SensorEntity):
         if "cleanPercentage" in pool_filter:
             self._value = pool_filter["cleanPercentage"]
         self._available = True
+        self._init_throttle()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -145,10 +152,10 @@ class FilterCleanSensor(PoolEquipmentEntity, SensorEntity):
         ):
             if "cleanPercentage" in self.coordinator.data:
                 self._value = self.coordinator.data["cleanPercentage"]
-            self.async_write_ha_state()
+            self._throttled_update(self._value)
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
-            self.async_write_ha_state()
+            self._immediate_update()
 
     @property
     def should_poll(self) -> bool:
@@ -183,8 +190,10 @@ class FilterCleanSensor(PoolEquipmentEntity, SensorEntity):
         return PERCENTAGE
 
 
-class FilterPressureSensor(PoolEquipmentEntity, SensorEntity):
+class FilterPressureSensor(ThrottledSensorMixin, PoolEquipmentEntity, SensorEntity):
     """Sensor for filter pressure"""
+
+    _throttle_delta = THROTTLE_FILTER_PRESSURE_DELTA
 
     def __init__(self, coordinator: NjsPCHAdata, pool_filter: Any) -> None:
         """Initialize the sensor."""
@@ -200,6 +209,7 @@ class FilterPressureSensor(PoolEquipmentEntity, SensorEntity):
         if "pressureUnits" in pool_filter and "name" in pool_filter["pressureUnits"]:
             self._units = pool_filter["pressureUnits"]["name"]
         self._available = True
+        self._init_throttle()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -216,10 +226,10 @@ class FilterPressureSensor(PoolEquipmentEntity, SensorEntity):
                 and "name" in self.coordinator.data["pressureUnits"]
             ):
                 self._units = self.coordinator.data["pressureUnits"]["name"]
-            self.async_write_ha_state()
+            self._throttled_update(self._value)
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
-            self.async_write_ha_state()
+            self._immediate_update()
 
     @property
     def should_poll(self) -> bool:
@@ -266,8 +276,10 @@ class FilterPressureSensor(PoolEquipmentEntity, SensorEntity):
                 return UnitOfPressure.PSI
 
 
-class BodyTempSensor(PoolEquipmentEntity, SensorEntity):
+class BodyTempSensor(ThrottledSensorMixin, PoolEquipmentEntity, SensorEntity):
     """Body Temp Sensor for njsPC-HA"""
+
+    _throttle_delta = THROTTLE_TEMP_DELTA
 
     def __init__(self, coordinator: NjsPCHAdata, units: str, body: Any) -> None:
         """Initialize the sensor."""
@@ -279,6 +291,7 @@ class BodyTempSensor(PoolEquipmentEntity, SensorEntity):
         if "temp" in body:
             self._value = round(body["temp"], 2)
         self._available = True
+        self._init_throttle()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
@@ -295,10 +308,10 @@ class BodyTempSensor(PoolEquipmentEntity, SensorEntity):
             if body is not None:
                 if "temp" in body:
                     self._value = round(body["temp"], 2)
-                    self.async_write_ha_state()
+                    self._throttled_update(self._value)
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
-            self.async_write_ha_state()
+            self._immediate_update()
 
     @property
     def should_poll(self) -> bool:

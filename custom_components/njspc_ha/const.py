@@ -69,9 +69,14 @@ SUPER_CHLOR_HOURS = "superChlorHours"
 MIN_FLOW = "minFlow"
 MAX_FLOW = "maxFlow"
 
-# Pump speed throttling defaults
-PUMP_SPEED_MIN_INTERVAL = 30  # seconds between state writes
-PUMP_SPEED_MIN_DELTA = 10  # RPM change that triggers immediate publish
+# Throttle defaults for push-driven sensors
+THROTTLE_DEFAULT_INTERVAL = 30  # seconds between state writes
+THROTTLE_PUMP_SPEED_DELTA = 10  # RPM
+THROTTLE_PUMP_POWER_DELTA = 5  # watts
+THROTTLE_PUMP_FLOW_DELTA = 1  # gpm
+THROTTLE_TEMP_DELTA = 0.1  # degrees
+THROTTLE_FILTER_PRESSURE_DELTA = 0.5  # psi
+THROTTLE_FILTER_CLEAN_DELTA = 1  # percent
 
 
 class PoolEquipmentClass(enum.StrEnum):

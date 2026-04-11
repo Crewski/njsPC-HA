@@ -1,10 +1,21 @@
 """Base Entity for njsPC."""
 from __future__ import annotations
 
+import time
+
+from homeassistant.core import CALLBACK_TYPE, callback
 from homeassistant.helpers.entity import DeviceInfo, Entity
-from . import NjsPCHAdata
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from .const import DOMAIN, MANUFACTURER, PoolEquipmentClass, PoolEquipmentModel
+
+from . import NjsPCHAdata
+from .const import (
+    DOMAIN,
+    MANUFACTURER,
+    PoolEquipmentClass,
+    PoolEquipmentModel,
+    THROTTLE_DEFAULT_INTERVAL,
+)
 from dataclasses import dataclass
 
 
@@ -87,6 +98,107 @@ DEVICE_MAPPING: dict[PoolEquipmentClass, PoolEquipmentDescription] = {
         label="Valve",
     ),
 }
+
+
+class ThrottledSensorMixin:
+    """Mixin that reduces HA state writes for push-driven entities.
+
+    Class attributes (override per-entity):
+        _throttle_interval: seconds between writes (default: THROTTLE_DEFAULT_INTERVAL)
+        _throttle_delta: minimum change for immediate publish (default: 0)
+            0 = any value change publishes immediately; unchanged values are skipped.
+            >0 = small changes are deferred and coalesced up to _throttle_interval.
+
+    Usage:
+        __init__: call self._init_throttle() after super().__init__().
+        data events: update self._value, then call self._throttled_update(self._value).
+        availability events: update self._available, then call self._immediate_update().
+    """
+
+    _throttle_interval: float = THROTTLE_DEFAULT_INTERVAL
+    _throttle_delta: float = 0
+
+    def _init_throttle(self) -> None:
+        """Initialize throttle state. Call at the end of __init__."""
+        self._throttle_last_published_value = None
+        self._throttle_last_publish_time: float = 0.0
+        self._throttle_flush_unsub: CALLBACK_TYPE | None = None
+        self._throttle_pending_value = None
+
+    def _throttled_update(self, new_value) -> None:
+        """Evaluate whether to publish now or defer a state write."""
+        now = time.monotonic()
+
+        # First update ever → publish immediately
+        if self._throttle_last_published_value is None:
+            self._do_throttled_publish(now, new_value)
+            return
+
+        # Exactly the same as last published → cancel any pending flush, skip
+        if new_value == self._throttle_last_published_value:
+            self._cancel_throttle_flush()
+            return
+
+        # Check if the change is significant enough for immediate publish
+        significant = self._throttle_delta <= 0
+        if not significant:
+            try:
+                significant = (
+                    abs(new_value - self._throttle_last_published_value)
+                    >= self._throttle_delta
+                )
+            except TypeError:
+                significant = True
+
+        if significant:
+            self._cancel_throttle_flush()
+            self._do_throttled_publish(now, new_value)
+            return
+
+        # Small numeric change — defer to interval
+        elapsed = now - self._throttle_last_publish_time
+        if elapsed >= self._throttle_interval:
+            self._cancel_throttle_flush()
+            self._do_throttled_publish(now, new_value)
+            return
+
+        # Store pending and schedule flush if not already pending
+        self._throttle_pending_value = new_value
+        if self._throttle_flush_unsub is None:
+            delay = self._throttle_interval - elapsed
+            self._throttle_flush_unsub = async_call_later(
+                self.coordinator.hass, delay, self._on_throttle_flush
+            )
+
+    @callback
+    def _on_throttle_flush(self, _now) -> None:
+        """Flush pending value when throttle interval expires."""
+        self._throttle_flush_unsub = None
+        self._do_throttled_publish(
+            time.monotonic(), self._throttle_pending_value
+        )
+
+    def _do_throttled_publish(self, now: float, value) -> None:
+        """Write state and record publish metadata."""
+        self._throttle_last_published_value = value
+        self._throttle_last_publish_time = now
+        self.async_write_ha_state()
+
+    def _cancel_throttle_flush(self) -> None:
+        """Cancel any pending flush timer."""
+        if self._throttle_flush_unsub is not None:
+            self._throttle_flush_unsub()
+            self._throttle_flush_unsub = None
+
+    def _immediate_update(self) -> None:
+        """Publish immediately, bypassing throttle. Use for availability."""
+        self._cancel_throttle_flush()
+        self.async_write_ha_state()
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Clean up throttle timer on entity removal."""
+        self._cancel_throttle_flush()
+        await super().async_will_remove_from_hass()
 
 
 class PoolEquipmentEntity(CoordinatorEntity[NjsPCHAdata], Entity):
