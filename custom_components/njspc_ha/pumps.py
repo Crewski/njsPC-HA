@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 from collections.abc import Mapping
 import math
+import time
 
 from homeassistant.components.sensor import (
     SensorEntity,
@@ -11,6 +12,8 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
 )
 from homeassistant.const import UnitOfPower
+from homeassistant.core import CALLBACK_TYPE, callback
+from homeassistant.helpers.event import async_call_later
 
 from .entity import PoolEquipmentEntity, NjsPCHAdata
 
@@ -27,6 +30,8 @@ from .const import (
     FLOW,
     MIN_FLOW,
     MAX_FLOW,
+    PUMP_SPEED_MIN_INTERVAL,
+    PUMP_SPEED_MIN_DELTA,
     PoolEquipmentClass,
 )
 
@@ -132,26 +137,82 @@ class PumpSpeedSensor(PoolEquipmentEntity, SensorEntity):
         if "minSpeed" in pump:
             self._state_attributes["min_speed"] = pump["minSpeed"]
         if "maxSpeed" in pump:
-            self._state_attributes["max_speed"] = (pump["maxSpeed"],)
+            self._state_attributes["max_speed"] = pump["maxSpeed"]
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_speed"
+
+        # Throttle state
+        self._last_published_value: int | None = None
+        self._last_published_time: float = 0.0
+        self._flush_unsub: CALLBACK_TYPE | None = None
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
+        if self.coordinator.data["event"] == EVENT_AVAILABILITY:
+            self._available = self.coordinator.data["available"]
+            self._cancel_flush()
+            self.async_write_ha_state()
+            return
+
         if (
             self.coordinator.data["event"] == EVENT_PUMP
             and self.coordinator.data["id"] == self.equipment_id
             and RPM in self.coordinator.data
         ):
-            if RPM in self.coordinator.data:
-                self._available = True
-                self._value = self.coordinator.data[RPM]
-            else:
-                self._available = False
-                self._value = None
-            self.async_write_ha_state()
-        elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
-            self._available = self.coordinator.data["available"]
-            self.async_write_ha_state()
+            self._available = True
+            self._value = self.coordinator.data[RPM]
+            self._maybe_publish()
+
+    def _maybe_publish(self) -> None:
+        """Decide whether to publish now or defer."""
+        now = time.monotonic()
+
+        # First update ever — publish immediately
+        if self._last_published_value is None:
+            self._publish(now)
+            return
+
+        # Meaningful RPM change — publish immediately
+        if abs(self._value - self._last_published_value) >= PUMP_SPEED_MIN_DELTA:
+            self._cancel_flush()
+            self._publish(now)
+            return
+
+        # Within throttle window — schedule a deferred flush
+        elapsed = now - self._last_published_time
+        if elapsed >= PUMP_SPEED_MIN_INTERVAL:
+            self._cancel_flush()
+            self._publish(now)
+            return
+
+        # Schedule flush for the remaining time if not already pending
+        if self._flush_unsub is None:
+            delay = PUMP_SPEED_MIN_INTERVAL - elapsed
+            self._flush_unsub = async_call_later(
+                self.coordinator.hass, delay, self._flush_callback
+            )
+
+    @callback
+    def _flush_callback(self, _now) -> None:
+        """Publish the latest pending value after the throttle window."""
+        self._flush_unsub = None
+        self._publish(time.monotonic())
+
+    def _publish(self, now: float) -> None:
+        """Write state to HA and record publish time."""
+        self._last_published_value = self._value
+        self._last_published_time = now
+        self.async_write_ha_state()
+
+    def _cancel_flush(self) -> None:
+        """Cancel any pending flush timer."""
+        if self._flush_unsub is not None:
+            self._flush_unsub()
+            self._flush_unsub = None
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Clean up pending timers on entity removal."""
+        self._cancel_flush()
+        await super().async_will_remove_from_hass()
 
     @property
     def should_poll(self) -> bool:

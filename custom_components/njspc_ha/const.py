@@ -69,6 +69,10 @@ SUPER_CHLOR_HOURS = "superChlorHours"
 MIN_FLOW = "minFlow"
 MAX_FLOW = "maxFlow"
 
+# Pump speed throttling defaults
+PUMP_SPEED_MIN_INTERVAL = 30  # seconds between state writes
+PUMP_SPEED_MIN_DELTA = 10  # RPM change that triggers immediate publish
+
 
 class PoolEquipmentClass(enum.StrEnum):
     """Class for pool equipment."""
