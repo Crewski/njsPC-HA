@@ -361,10 +361,10 @@ class PumpOnSensor(PoolEquipmentEntity, BinarySensorEntity):
         self._value = None
         if "relay" in pump:
             self._value = pump["relay"] > 0
-        elif "command" in pump:
-            self._value = pump["command"] == 10
         else:
-            self._value = False
+            # rpm/watts are the most reliable cross-pump-type running indicator.
+            # command==10 is unreliable: Regal Modbus uses command=4 while running.
+            self._value = (pump.get(RPM) or 0) > 0 or (pump.get(WATTS) or 0) > 0
         self._available = True
         self._attr_has_entity_name = True
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_ison"
@@ -377,8 +377,10 @@ class PumpOnSensor(PoolEquipmentEntity, BinarySensorEntity):
         ):
             if "relay" in self.coordinator.data:
                 self._value = self.coordinator.data["relay"] > 0
-            elif "command" in self.coordinator.data:
-                self._value = self.coordinator.data["command"] == 10
+            elif RPM in self.coordinator.data or WATTS in self.coordinator.data:
+                # rpm/watts are the most reliable cross-pump-type running indicator.
+                # command==10 is unreliable: Regal Modbus uses command=4 while running.
+                self._value = (self.coordinator.data.get(RPM) or 0) > 0 or (self.coordinator.data.get(WATTS) or 0) > 0
             else:
                 self._value = False
             self._available = True
