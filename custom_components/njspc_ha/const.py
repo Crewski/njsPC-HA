@@ -50,6 +50,15 @@ RECONNECT_MAX_DELAY = 300
 RECONNECT_BACKOFF_MULTIPLIER = 2
 RECONNECT_JITTER_FACTOR = 0.25
 
+# When the Socket.IO connection drops and reconnects within this window (seconds),
+# skip the api.get_initial() refetch in the reconnect loop. A live-connection event
+# arriving more recently than this means the server's config almost certainly hasn't
+# changed; re-fetching it forces every entity through Home Assistant's entity registry
+# again, which on a flaky link causes log spam and a brief stale-state window every
+# time the network hiccups. Drops longer than this still trigger the full re-fetch
+# (the server may have restarted with config changes), preserving correctness.
+LIVE_POLL_THRESHOLD_S = 60
+
 POOL_SETPOINT = "poolSetpoint"
 SPA_SETPOINT = "spaSetpoint"
 

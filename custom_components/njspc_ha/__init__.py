@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import random
+import time
 
 import aiohttp
 import socketio
@@ -54,6 +55,7 @@ from .const import (
     RECONNECT_MAX_DELAY,
     RECONNECT_BACKOFF_MULTIPLIER,
     RECONNECT_JITTER_FACTOR,
+    LIVE_POLL_THRESHOLD_S,
 )
 
 
@@ -137,90 +139,113 @@ class NjsPCHAdata(DataUpdateCoordinator):
         # Reconnection state
         self._reconnect_task: asyncio.Task | None = None
         self._unloading: bool = False
+        # Monotonic timestamp of the last live event from njsPC. Used in
+        # _reconnect_loop to skip api.get_initial() on fast reconnects (see
+        # LIVE_POLL_THRESHOLD_S in const.py).
+        self._last_successful_poll: float | None = None
 
     def _register_sio_handlers(self):
         """Register Socket.IO event handlers on the current client."""
 
+        def stamp_live():
+            # Record that a live event just arrived. _reconnect_loop reads this to
+            # skip api.get_initial() on fast reconnects (see LIVE_POLL_THRESHOLD_S).
+            self._last_successful_poll = time.monotonic()
+
         @self.sio.on("temps")
         async def handle_temps(data):
+            stamp_live()
             data["event"] = EVENT_TEMPS
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 
         @self.sio.on("pump")
         async def handle_pump(data):
+            stamp_live()
             data["event"] = EVENT_PUMP
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 
         @self.sio.on("circuit")
         async def handle_circuit(data):
+            stamp_live()
             data["event"] = EVENT_CIRCUIT
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 
         @self.sio.on("chlorinator")
         async def handle_chlorinator(data):
+            stamp_live()
             data["event"] = EVENT_CHLORINATOR
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 
         @self.sio.on("chemController")
         async def handle_chem_controller(data):
+            stamp_live()
             data["event"] = EVENT_CHEM_CONTROLLER
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 
         @self.sio.on("body")
         async def handle_body(data):
+            stamp_live()
             data["event"] = EVENT_BODY
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 
         @self.sio.on("lightGroup")
         async def handle_lightgroup(data):
+            stamp_live()
             data["event"] = EVENT_LIGHTGROUP
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 
         @self.sio.on("circuitGroup")
         async def handle_circuitgroup(data):
+            stamp_live()
             data["event"] = EVENT_CIRCUITGROUP
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 
         @self.sio.on("feature")
         async def handle_feature(data):
+            stamp_live()
             data["event"] = EVENT_FEATURE
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 
         @self.sio.on("controller")
         async def handle_controller(data):
+            stamp_live()
             data["event"] = EVENT_CONTROLLER
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 
         @self.sio.on("filter")
         async def handle_filter(data):
+            stamp_live()
             data["event"] = EVENT_FILTER
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 
         @self.sio.on("virtualCircuit")
         async def handle_virtual_circuit(data):
+            stamp_live()
             data["event"] = EVENT_VIRTUAL_CIRCUIT
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 
         @self.sio.on("schedule")
         async def handle_schedule(data):
+            stamp_live()
             data["event"] = EVENT_SCHEDULE
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 
         @self.sio.event
         async def connect():
+            stamp_live()
             _LOGGER.info("Socket.IO connected to %s", self.api.get_base_url())
             avail = {"event": EVENT_AVAILABILITY, "available": True}
             self.async_set_updated_data(avail)
@@ -295,11 +320,23 @@ class NjsPCHAdata(DataUpdateCoordinator):
                 # Clean up old client
                 await self._safe_disconnect()
 
-                # Re-fetch state via HTTP
-                _LOGGER.debug("Re-fetching state from %s", self.api.get_base_url())
-                await self.api.get_initial()
-                if self.api.config is None:
-                    raise ConnectionError("Failed to fetch config (non-200 response)")
+                # Re-fetch state via HTTP, but ONLY if it's been a while since
+                # the last live event. On a fast network flap, the server's config
+                # is almost certainly unchanged; calling get_initial() again forces
+                # every entity through HA's entity registry, causing log spam and
+                # a brief stale-state window. See LIVE_POLL_THRESHOLD_S in const.py.
+                now = time.monotonic()
+                if (self._last_successful_poll is None
+                        or now - self._last_successful_poll > LIVE_POLL_THRESHOLD_S):
+                    _LOGGER.debug("Re-fetching state from %s", self.api.get_base_url())
+                    await self.api.get_initial()
+                    if self.api.config is None:
+                        raise ConnectionError("Failed to fetch config (non-200 response)")
+                else:
+                    _LOGGER.debug(
+                        "Skipping get_initial; last live event %.1fs ago (threshold %ds)",
+                        now - self._last_successful_poll, LIVE_POLL_THRESHOLD_S,
+                    )
 
                 # Create fresh Socket.IO client and connect
                 await self.sio_connect()
