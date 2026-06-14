@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.components.light import (
+    ATTR_BRIGHTNESS,
     ATTR_EFFECT,
     ColorMode,
     LightEntity,
@@ -15,6 +16,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import (
+    API_CIRCUIT_SETDIMMERLEVEL,
     API_CIRCUIT_SETSTATE,
     API_CIRCUIT_SETTHEME,
     API_LIGHTGROUP_SETSTATE,
@@ -102,6 +104,8 @@ class CircuitLight(PoolEquipmentEntity, LightEntity):
         self._lightthemes = lightthemes
         self._value = None
         self._available = True
+        self._is_dimmer = circuit.get("type", {}).get("name") == "dimmer"
+        self._level = circuit.get("level", 0)
         if "isOn" in circuit:
             self._value = circuit["isOn"]
         self._lighting_theme = None
@@ -117,6 +121,8 @@ class CircuitLight(PoolEquipmentEntity, LightEntity):
         ):
             if "isOn" in self.coordinator.data:
                 self._value = self.coordinator.data["isOn"]
+            if "level" in self.coordinator.data:
+                self._level = self.coordinator.data["level"]
             if "lightingTheme" in self.coordinator.data:
                 self._lighting_theme = self.coordinator.data["lightingTheme"]["val"]
 
@@ -127,6 +133,18 @@ class CircuitLight(PoolEquipmentEntity, LightEntity):
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn the entity on."""
+        if self._is_dimmer:
+            if ATTR_BRIGHTNESS in kwargs:
+                pct = kwargs[ATTR_BRIGHTNESS] / 255 * 100
+                level = max(30, min(100, round(pct / 10) * 10))
+            else:
+                level = self._level if self._level >= 30 else 100
+            await self.coordinator.api.command(
+                url=API_CIRCUIT_SETDIMMERLEVEL,
+                data={"id": self.equipment_id, "level": level},
+            )
+            return
+
         if ATTR_EFFECT in kwargs:
             if len(self._lightthemes) > 0:
                 njspc_value = next(
@@ -150,7 +168,13 @@ class CircuitLight(PoolEquipmentEntity, LightEntity):
         await self.coordinator.api.command(url=self._command, data=data)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        """Turn the entity on."""
+        """Turn the entity off."""
+        if self._is_dimmer:
+            await self.coordinator.api.command(
+                url=API_CIRCUIT_SETDIMMERLEVEL,
+                data={"id": self.equipment_id, "level": 0},
+            )
+            return
         data = {"id": self.equipment_id, "state": False}
         await self.coordinator.api.command(url=self._command, data=data)
 
@@ -205,11 +229,22 @@ class CircuitLight(PoolEquipmentEntity, LightEntity):
         return LightEntityFeature(0)
 
     @property
+    def brightness(self) -> int | None:
+        """Return brightness (0-255) for dimmer circuits."""
+        if self._is_dimmer:
+            return round(self._level / 100 * 255) if self._level > 0 else 0
+        return None
+
+    @property
     def color_mode(self) -> ColorMode:
-        """Get color mode, always ONOFF for njs-PC."""
+        """Get color mode."""
+        if self._is_dimmer:
+            return ColorMode.BRIGHTNESS
         return ColorMode.ONOFF
 
     @property
     def supported_color_modes(self) -> set[ColorMode]:
-        """Color mode list, only ONOFF for njs-PC."""
+        """Color mode list."""
+        if self._is_dimmer:
+            return {ColorMode.BRIGHTNESS}
         return {ColorMode.ONOFF}
