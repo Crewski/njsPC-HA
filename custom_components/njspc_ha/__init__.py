@@ -46,6 +46,7 @@ from .const import (
     EVENT_FEATURE,
     EVENT_LIGHTGROUP,
     EVENT_PUMP,
+    EVENT_PUMP_EXT,
     EVENT_FILTER,
     EVENT_VIRTUAL_CIRCUIT,
     EVENT_TEMPS,
@@ -150,6 +151,12 @@ class NjsPCHAdata(DataUpdateCoordinator):
         @self.sio.on("pump")
         async def handle_pump(data):
             data["event"] = EVENT_PUMP
+            self.async_set_updated_data(data)
+            self.send_to_bus(data)
+
+        @self.sio.on("pumpExt")
+        async def handle_pump_ext(data):
+            data["event"] = EVENT_PUMP_EXT
             self.async_set_updated_data(data)
             self.send_to_bus(data)
 

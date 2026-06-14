@@ -11,6 +11,7 @@ from .chemistry import (
     ChemControllerSetpoint,
     ChemControllerIndex,
 )
+from .pumps import PumpCircuitSpeedNumber
 
 
 async def async_setup_entry(
@@ -97,5 +98,17 @@ async def async_setup_entry(
 
         except KeyError:
             pass
+    for pump in config.get("pumps", []):
+        pump_type = pump.get("type", {})
+        if "maxSpeed" not in pump_type and "maxFlow" not in pump_type:
+            continue
+        for circuit in pump.get("circuits", []):
+            if not circuit.get("circuit", {}).get("id"):
+                continue
+            new_devices.append(
+                PumpCircuitSpeedNumber(
+                    coordinator=coordinator, pump=pump, circuit=circuit
+                )
+            )
     if new_devices:
         async_add_entities(new_devices)

@@ -16,7 +16,7 @@ from homeassistant.components.sensor import (
     SensorDeviceClass
 )
 from homeassistant.const import UnitOfTemperature
-from .entity import PoolEquipmentEntity
+from .entity import PoolEquipmentEntity, ThrottledSensorMixin
 from .__init__ import NjsPCHAdata
 from .const import (
     PoolEquipmentModel,
@@ -25,7 +25,8 @@ from .const import (
     EVENT_CONTROLLER,
     EVENT_TEMPS,
     STATUS,
-    DESC
+    DESC,
+    THROTTLE_TEMP_DELTA,
 )
 
 
@@ -161,8 +162,10 @@ class PanelModeSensor(PoolEquipmentEntity, SensorEntity):
             case _:
                 return "mdi:lock-alert"
 
-class TempProbeSensor(PoolEquipmentEntity, SensorEntity):
+class TempProbeSensor(ThrottledSensorMixin, PoolEquipmentEntity, SensorEntity):
     """Temp Sensor for njsPC-HA"""
+
+    _throttle_delta = THROTTLE_TEMP_DELTA
 
     def __init__(self, coordinator:NjsPCHAdata, key, units) -> None:
         """Initialize the sensor."""
@@ -173,20 +176,21 @@ class TempProbeSensor(PoolEquipmentEntity, SensorEntity):
         if "temps" in coordinator.api.config and key in coordinator.api.config["temps"]:
             self._value = round(coordinator.api.config["temps"][key], 1)
         self._available = True
+        self._init_throttle()
 
     def _handle_coordinator_update(self) -> None:
         """Handle updated data from the coordinator."""
         if (
             self.coordinator.data["event"] == EVENT_TEMPS
             and self._key in self.coordinator.data
-        ):  # make sure the data we are looking for is in the coordinator data
+        ):
             self._value = round(self.coordinator.data[self._key], 1)
             if "units" in self.coordinator.data:
                 self._units = self.coordinator.data["units"]["name"]
-            self.async_write_ha_state()
+            self._throttled_update(self._value)
         elif self.coordinator.data["event"] == EVENT_AVAILABILITY:
             self._available = self.coordinator.data["available"]
-            self.async_write_ha_state()
+            self._immediate_update()
 
     @property
     def should_poll(self) -> bool:
