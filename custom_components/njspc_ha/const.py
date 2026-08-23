@@ -50,6 +50,56 @@ RECONNECT_MAX_DELAY = 300
 RECONNECT_BACKOFF_MULTIPLIER = 2
 RECONNECT_JITTER_FACTOR = 0.25
 
+# Config-entry key holding the URL scheme ("http" or "https") the user chose
+# for this pool controller. Absent (older entries) means plain http. Stored
+# SEPARATELY from CONF_HOST so CONF_HOST stays scheme-free — the unique-id /
+# entity-id helpers do `CONF_HOST.replace(".", "")` and a bare "https://pool"
+# would corrupt them.
+CONF_SCHEME = "scheme"
+
+
+def parse_scheme(host: str) -> str:
+    """Return the scheme the user entered ("https", "http") or "http" if none.
+
+    ``host`` may be ``"https://pool.example"``, ``"http://pool.example"`` or a
+    bare ``"pool.example"``. Bare hosts (and older configs that stored no
+    scheme) mean plain http for backward compatibility.
+    """
+    lowered = (host or "").strip().lower()
+    if lowered.startswith("https://"):
+        return "https"
+    if lowered.startswith("http://"):
+        return "http"
+    return "http"
+
+
+def strip_scheme(host: str) -> str:
+    """Strip any ``scheme://`` prefix and trailing slash from a host string."""
+    host = (host or "").strip()
+    for prefix in ("https://", "http://"):
+        if host.lower().startswith(prefix):
+            host = host[len(prefix):]
+            break
+    return host.rstrip("/")
+
+
+def build_base_url(host: str, port: int, scheme: str | None = None) -> str:
+    """Build the scheme-aware base URL.
+
+    ``scheme`` is the user's explicit choice (from ``CONF_SCHEME``); when None
+    (legacy configs that stored no scheme) the scheme is inferred from ``host``
+    itself if it carries ``https://``/``http://``, else plain ``http``.
+    """
+    host = (host or "").strip()
+    lowered = host.lower()
+    if lowered.startswith("https://"):
+        scheme, host = "https", host[len("https://"):]
+    elif lowered.startswith("http://"):
+        scheme, host = "http", host[len("http://"):]
+    else:
+        scheme = scheme or "http"
+    return f"{scheme}://{host.rstrip('/')}:{port}"
+
 POOL_SETPOINT = "poolSetpoint"
 SPA_SETPOINT = "spaSetpoint"
 

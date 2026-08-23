@@ -35,7 +35,9 @@ from .const import (
     API_LIGHTTHEMES,
     API_STATE_ALL,
     API_LIGHTCOMMANDS,
+    CONF_SCHEME,
     DOMAIN,
+    build_base_url,
     EVENT_AVAILABILITY,
     EVENT_BODY,
     EVENT_CHLORINATOR,
@@ -359,7 +361,11 @@ class NjsPCHAapi:
     def __init__(self, hass: HomeAssistant, data) -> None:
         self.hass = hass
         self.data = data
-        self._base_url = f"http://{data[CONF_HOST]}:{data[CONF_PORT]}"
+        self._base_url = build_base_url(
+            data.get(CONF_HOST, ""),
+            data.get(CONF_PORT, 4200),
+            data.get(CONF_SCHEME),
+        )
         self.config = None
         self._session = None
         self.model = "Unknown"
