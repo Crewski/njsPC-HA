@@ -18,7 +18,7 @@ from urllib.parse import urlparse
 
 from homeassistant.const import CONF_HOST, CONF_PORT
 
-from .const import DOMAIN
+from .const import CONF_SCHEME, DOMAIN, parse_scheme, strip_scheme
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -35,16 +35,16 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
-    host = data[CONF_HOST].strip()
-    for prefix in ("https://", "http://"):
-        if host.lower().startswith(prefix):
-            host = host[len(prefix):]
-            break
-    host = host.rstrip("/")
+    raw_host = data[CONF_HOST].strip()
+    scheme = parse_scheme(raw_host)
+    host = strip_scheme(raw_host)
     data[CONF_HOST] = host
+    # Store the scheme the user entered so the runtime can build a scheme-aware
+    # base URL. Absent = http (backward compat with older entries).
+    data[CONF_SCHEME] = scheme
 
     session = aiohttp_client.async_get_clientsession(hass)
-    async with session.get(f'http://{host}:{data["port"]}/state/all') as resp:
+    async with session.get(f"{scheme}://{host}:{data[CONF_PORT]}/state/all") as resp:
         if resp.status == 200:
             pass
         else:
@@ -79,6 +79,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         try:
             info = await validate_input(self.hass, user_input)
+            # validate_input strips any scheme off CONF_HOST in place, so this
+            # stays scheme-free (a "https://pool" would corrupt the id).
             self.server_id = f'njspcha_{user_input[CONF_HOST].replace(".", "")}{user_input[CONF_PORT]}'
             await self.async_set_unique_id(self.server_id)
             self._abort_if_unique_id_configured()
