@@ -132,7 +132,7 @@ class PumpSpeedSensor(PoolEquipmentEntity, SensorEntity):
         if "minSpeed" in pump:
             self._state_attributes["min_speed"] = pump["minSpeed"]
         if "maxSpeed" in pump:
-            self._state_attributes["max_speed"] = (pump["maxSpeed"],)
+            self._state_attributes["max_speed"] = pump["maxSpeed"]
         self._attr_device_class = f"{self.equipment_name}_{self.equipment_class}_speed"
 
     def _handle_coordinator_update(self) -> None:
